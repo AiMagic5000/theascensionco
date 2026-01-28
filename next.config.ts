@@ -1,7 +1,16 @@
-import type { NextConfig } from "next";
+import type { NextConfig } from "next"
 
 const nextConfig: NextConfig = {
-  /* config options here */
-};
+  // Enable static export for Hostinger deployment
+  output: "export",
 
-export default nextConfig;
+  // Disable image optimization for static export
+  images: {
+    unoptimized: true,
+  },
+
+  // Trailing slash for better static hosting compatibility
+  trailingSlash: true,
+}
+
+export default nextConfig
