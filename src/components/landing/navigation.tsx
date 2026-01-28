@@ -30,7 +30,7 @@ export function Navigation() {
               alt="Ascendant Group"
               width={600}
               height={150}
-              className="h-10 w-auto"
+              className="h-14 md:h-16 w-auto max-w-[280px] md:max-w-[360px]"
               priority
             />
           </Link>

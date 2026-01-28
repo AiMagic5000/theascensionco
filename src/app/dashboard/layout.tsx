@@ -47,7 +47,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               alt="Ascendant Group"
               width={420}
               height={105}
-              className="h-8 w-auto"
+              className="h-12 w-auto max-w-[240px]"
             />
           </Link>
           <div className="flex items-center space-x-2">
@@ -82,7 +82,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 alt="Ascendant Group"
                 width={450}
                 height={114}
-                className="h-9 w-auto"
+                className="h-12 w-auto max-w-[200px]"
               />
             </Link>
             <button

@@ -47,6 +47,7 @@ export default function RootLayout({
             attribute="class"
             defaultTheme="light"
             enableSystem={false}
+            storageKey="ascension-theme"
             disableTransitionOnChange
           >
             {children}

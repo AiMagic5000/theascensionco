@@ -72,7 +72,7 @@ export default function DashboardPage() {
             Welcome back!
           </h1>
           <p className="text-gray-600 dark:text-gray-400 mt-1">
-            Here&apos;s an overview of your account and services.
+            This is demo content until we start building your privacy file or business.
           </p>
         </div>
         <Button asChild>
