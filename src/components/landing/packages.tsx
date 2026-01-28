@@ -161,7 +161,7 @@ const creditRepairPackage = {
 
 export function Packages() {
   return (
-    <section id="packages" className="py-24 bg-white dark:bg-gray-950">
+    <section id="packages" className="py-24 bg-white">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -169,10 +169,10 @@ export function Packages() {
           viewport={{ once: true }}
           className="text-center mb-16"
         >
-          <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 dark:text-white">
+          <h2 className="text-3xl sm:text-4xl font-bold text-gray-900">
             Choose Your Path to Success
           </h2>
-          <p className="mt-4 text-lg text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
+          <p className="mt-4 text-lg text-gray-600 max-w-2xl mx-auto">
             Select the package that best fits your goals. All packages include expert guidance
             and dedicated support throughout your journey.
           </p>
@@ -180,7 +180,7 @@ export function Packages() {
 
         {/* Privacy Services */}
         <div className="mb-20">
-          <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-8 text-center">
+          <h3 className="text-2xl font-bold text-gray-900 mb-8 text-center">
             Privacy Protection Packages
           </h3>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
@@ -191,10 +191,10 @@ export function Packages() {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ delay: index * 0.05 }}
-                className={`relative bg-white dark:bg-gray-900 rounded-2xl p-6 border ${
+                className={`relative bg-white rounded-2xl p-6 border ${
                   pkg.popular
                     ? "border-blue-500 ring-2 ring-blue-500"
-                    : "border-gray-200 dark:border-gray-800"
+                    : "border-gray-200"
                 }`}
               >
                 {pkg.popular && (
@@ -204,22 +204,22 @@ export function Packages() {
                     </span>
                   </div>
                 )}
-                <h4 className="text-lg font-semibold text-gray-900 dark:text-white">
+                <h4 className="text-lg font-semibold text-gray-900">
                   {pkg.name}
                 </h4>
                 <div className="mt-2">
-                  <span className="text-3xl font-bold text-gray-900 dark:text-white">
+                  <span className="text-3xl font-bold text-gray-900">
                     ${pkg.price.toLocaleString()}
                   </span>
                 </div>
-                <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
+                <p className="mt-2 text-sm text-gray-600">
                   {pkg.description}
                 </p>
                 <ul className="mt-4 space-y-2">
                   {pkg.features.map((feature, i) => (
                     <li key={i} className="flex items-start text-sm">
                       <Check className="h-4 w-4 text-green-500 mr-2 mt-0.5 flex-shrink-0" />
-                      <span className="text-gray-700 dark:text-gray-300">{feature}</span>
+                      <span className="text-gray-700">{feature}</span>
                     </li>
                   ))}
                 </ul>
@@ -238,7 +238,7 @@ export function Packages() {
 
         {/* Business Packages */}
         <div className="mb-20">
-          <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-8 text-center">
+          <h3 className="text-2xl font-bold text-gray-900 mb-8 text-center">
             Business Formation Packages
           </h3>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
@@ -249,10 +249,10 @@ export function Packages() {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ delay: index * 0.1 }}
-                className={`relative bg-white dark:bg-gray-900 rounded-2xl p-8 border ${
+                className={`relative bg-white rounded-2xl p-8 border ${
                   pkg.popular
                     ? "border-purple-500 ring-2 ring-purple-500"
-                    : "border-gray-200 dark:border-gray-800"
+                    : "border-gray-200"
                 }`}
               >
                 {pkg.popular && (
@@ -263,26 +263,26 @@ export function Packages() {
                   </div>
                 )}
                 <div className="flex items-center gap-3 mb-4">
-                  <div className="w-12 h-12 bg-purple-100 dark:bg-purple-900/50 rounded-xl flex items-center justify-center">
-                    <pkg.icon className="h-6 w-6 text-purple-600 dark:text-purple-400" />
+                  <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center">
+                    <pkg.icon className="h-6 w-6 text-purple-600" />
                   </div>
-                  <h4 className="text-xl font-semibold text-gray-900 dark:text-white">
+                  <h4 className="text-xl font-semibold text-gray-900">
                     {pkg.name}
                   </h4>
                 </div>
                 <div className="mb-4">
-                  <span className="text-4xl font-bold text-gray-900 dark:text-white">
+                  <span className="text-4xl font-bold text-gray-900">
                     ${pkg.price.toLocaleString()}
                   </span>
                 </div>
-                <p className="text-gray-600 dark:text-gray-400 mb-6">
+                <p className="text-gray-600 mb-6">
                   {pkg.description}
                 </p>
                 <ul className="space-y-3 mb-6">
                   {pkg.features.map((feature, i) => (
                     <li key={i} className="flex items-start text-sm">
                       <Check className="h-4 w-4 text-green-500 mr-2 mt-0.5 flex-shrink-0" />
-                      <span className="text-gray-700 dark:text-gray-300">{feature}</span>
+                      <span className="text-gray-700">{feature}</span>
                     </li>
                   ))}
                 </ul>
@@ -301,34 +301,34 @@ export function Packages() {
 
         {/* Credit Repair */}
         <div>
-          <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-8 text-center">
+          <h3 className="text-2xl font-bold text-gray-900 mb-8 text-center">
             Credit Enhancement Service
           </h3>
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            className="max-w-2xl mx-auto bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 rounded-2xl p-8 border border-green-200 dark:border-green-800"
+            className="max-w-2xl mx-auto bg-gradient-to-br from-green-50 to-emerald-50 rounded-2xl p-8 border border-green-200"
           >
             <div className="text-center">
-              <h4 className="text-2xl font-bold text-gray-900 dark:text-white">
+              <h4 className="text-2xl font-bold text-gray-900">
                 {creditRepairPackage.name}
               </h4>
               <div className="mt-4">
-                <span className="text-5xl font-bold text-gray-900 dark:text-white">
+                <span className="text-5xl font-bold text-gray-900">
                   ${creditRepairPackage.price.toLocaleString()}
                 </span>
-                <span className="text-gray-600 dark:text-gray-400 ml-2">one-time</span>
+                <span className="text-gray-600 ml-2">one-time</span>
               </div>
-              <p className="mt-4 text-gray-600 dark:text-gray-400">
+              <p className="mt-4 text-gray-600">
                 {creditRepairPackage.description}
               </p>
             </div>
             <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 gap-4">
               {creditRepairPackage.features.map((feature, i) => (
                 <div key={i} className="flex items-center">
-                  <Check className="h-5 w-5 text-green-600 dark:text-green-400 mr-2" />
-                  <span className="text-gray-700 dark:text-gray-300">{feature}</span>
+                  <Check className="h-5 w-5 text-green-600 mr-2" />
+                  <span className="text-gray-700">{feature}</span>
                 </div>
               ))}
             </div>

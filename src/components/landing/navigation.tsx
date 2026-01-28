@@ -3,8 +3,7 @@
 import Link from "next/link"
 import Image from "next/image"
 import { useState } from "react"
-import { Menu, X, ChevronDown } from "lucide-react"
-import { ThemeToggle } from "@/components/ui/theme-toggle"
+import { Menu, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 
@@ -20,9 +19,9 @@ export function Navigation() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
   return (
-    <nav className="fixed top-0 left-0 right-0 z-50 bg-white/80 backdrop-blur-lg border-b border-gray-200 dark:bg-gray-950/80 dark:border-gray-800">
+    <nav className="fixed top-0 left-0 right-0 z-50 bg-white/90 backdrop-blur-lg border-b border-gray-200">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16">
+        <div className="flex items-center justify-between h-20">
           {/* Logo */}
           <Link href="/" className="flex items-center">
             <Image
@@ -41,7 +40,7 @@ export function Navigation() {
               <Link
                 key={link.href}
                 href={link.href}
-                className="text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white transition-colors text-sm font-medium"
+                className="text-gray-600 hover:text-gray-900 transition-colors text-sm font-medium"
               >
                 {link.label}
               </Link>
@@ -50,7 +49,6 @@ export function Navigation() {
 
           {/* Right side actions */}
           <div className="flex items-center space-x-4">
-            <ThemeToggle />
             <Link href="/sign-in" className="hidden sm:block">
               <Button variant="ghost" size="sm">
                 Sign In
@@ -63,12 +61,12 @@ export function Navigation() {
             {/* Mobile menu button */}
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="md:hidden p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800"
+              className="md:hidden p-2 rounded-lg hover:bg-gray-100"
             >
               {mobileMenuOpen ? (
-                <X className="h-6 w-6 text-gray-900 dark:text-white" />
+                <X className="h-6 w-6 text-gray-900" />
               ) : (
-                <Menu className="h-6 w-6 text-gray-900 dark:text-white" />
+                <Menu className="h-6 w-6 text-gray-900" />
               )}
             </button>
           </div>
@@ -82,13 +80,13 @@ export function Navigation() {
           mobileMenuOpen ? "max-h-96" : "max-h-0"
         )}
       >
-        <div className="px-4 py-4 space-y-2 bg-white dark:bg-gray-950 border-t border-gray-200 dark:border-gray-800">
+        <div className="px-4 py-4 space-y-2 bg-white border-t border-gray-200">
           {navLinks.map((link) => (
             <Link
               key={link.href}
               href={link.href}
               onClick={() => setMobileMenuOpen(false)}
-              className="block px-4 py-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 dark:text-gray-300 dark:hover:text-white dark:hover:bg-gray-800 rounded-lg transition-colors"
+              className="block px-4 py-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
             >
               {link.label}
             </Link>
