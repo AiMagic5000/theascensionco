@@ -1,12 +1,13 @@
 "use client"
 
 import { useTheme } from "next-themes"
-import { useEffect, useState } from "react"
+import { useEffect, useState, useId } from "react"
 import { cn } from "@/lib/utils"
 
 export function ThemeToggle({ className }: { className?: string }) {
-  const { resolvedTheme, setTheme } = useTheme()
+  const { theme, setTheme } = useTheme()
   const [mounted, setMounted] = useState(false)
+  const id = useId()
 
   useEffect(() => {
     setMounted(true)
@@ -20,24 +21,25 @@ export function ThemeToggle({ className }: { className?: string }) {
     )
   }
 
-  const isDark = resolvedTheme === "dark"
+  const isDark = theme === "dark"
 
   const handleToggle = () => {
-    setTheme(isDark ? "light" : "dark")
+    const newTheme = isDark ? "light" : "dark"
+    setTheme(newTheme)
   }
 
   return (
     <div className={cn("theme-toggle-container", className)}>
       <input
         type="checkbox"
-        id="theme-toggle-input"
+        id={`theme-toggle-${id}`}
         className="theme-toggle-checkbox"
         checked={isDark}
         onChange={handleToggle}
         aria-label="Toggle dark mode"
       />
       <label
-        htmlFor="theme-toggle-input"
+        htmlFor={`theme-toggle-${id}`}
         className="theme-toggle-label"
         role="switch"
         aria-checked={isDark}
