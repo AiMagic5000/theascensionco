@@ -3,7 +3,7 @@
 import { useState } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { UserButton } from "@clerk/nextjs"
+import { UserButtonWrapper } from "@/components/user-button-wrapper"
 import { ThemeToggle } from "@/components/ui/theme-toggle"
 import { cn } from "@/lib/utils"
 import {
@@ -48,7 +48,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           </Link>
           <div className="flex items-center space-x-2">
             <ThemeToggle />
-            <UserButton afterSignOutUrl="/" />
+            <UserButtonWrapper afterSignOutUrl="/" />
           </div>
         </div>
       </header>
@@ -114,7 +114,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           <div className="p-4 border-t border-gray-200 dark:border-gray-800">
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-3">
-                <UserButton afterSignOutUrl="/" />
+                <UserButtonWrapper afterSignOutUrl="/" />
                 <div className="hidden lg:block">
                   <p className="text-sm font-medium text-gray-900 dark:text-white">Account</p>
                 </div>
