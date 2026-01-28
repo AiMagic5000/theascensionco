@@ -1,0 +1,12 @@
+{
+  "mode": "yolo",
+  "depth": "standard",
+  "parallelization": true,
+  "project": {
+    "name": "The Ascension Company",
+    "domain": "theascensionco.us",
+    "type": "next.js",
+    "deployment": "hostinger"
+  },
+  "created": "2026-01-28"
+}
