@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import Link from "next/link"
+import Image from "next/image"
 import { usePathname } from "next/navigation"
 import { UserButtonWrapper } from "@/components/user-button-wrapper"
 import { ThemeToggle } from "@/components/ui/theme-toggle"
@@ -40,11 +41,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           >
             <Menu className="h-6 w-6 text-gray-900 dark:text-white" />
           </button>
-          <Link href="/dashboard" className="flex items-center space-x-2">
-            <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-purple-600 rounded-lg flex items-center justify-center">
-              <span className="text-white font-bold text-sm">AC</span>
-            </div>
-            <span className="font-semibold text-gray-900 dark:text-white">Dashboard</span>
+          <Link href="/dashboard" className="flex items-center">
+            <Image
+              src="/logo.png"
+              alt="Ascendant Group"
+              width={140}
+              height={35}
+              className="h-8 w-auto"
+            />
           </Link>
           <div className="flex items-center space-x-2">
             <ThemeToggle />
@@ -72,11 +76,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         <div className="flex flex-col h-full">
           {/* Logo */}
           <div className="flex items-center justify-between px-4 h-16 border-b border-gray-200 dark:border-gray-800">
-            <Link href="/" className="flex items-center space-x-2">
-              <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-purple-600 rounded-lg flex items-center justify-center">
-                <span className="text-white font-bold text-sm">AC</span>
-              </div>
-              <span className="font-semibold text-gray-900 dark:text-white">Ascension</span>
+            <Link href="/" className="flex items-center">
+              <Image
+                src="/logo.png"
+                alt="Ascendant Group"
+                width={150}
+                height={38}
+                className="h-9 w-auto"
+              />
             </Link>
             <button
               onClick={() => setSidebarOpen(false)}

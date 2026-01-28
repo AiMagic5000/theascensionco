@@ -1,6 +1,7 @@
 "use client"
 
 import Link from "next/link"
+import Image from "next/image"
 import { useState } from "react"
 import { Menu, X, ChevronDown } from "lucide-react"
 import { ThemeToggle } from "@/components/ui/theme-toggle"
@@ -23,13 +24,15 @@ export function Navigation() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
-          <Link href="/" className="flex items-center space-x-2">
-            <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-purple-600 rounded-lg flex items-center justify-center">
-              <span className="text-white font-bold text-sm">AC</span>
-            </div>
-            <span className="font-semibold text-lg text-gray-900 dark:text-white hidden sm:block">
-              The Ascension Company
-            </span>
+          <Link href="/" className="flex items-center">
+            <Image
+              src="/logo.png"
+              alt="Ascendant Group"
+              width={200}
+              height={50}
+              className="h-10 w-auto"
+              priority
+            />
           </Link>
 
           {/* Desktop Navigation */}
