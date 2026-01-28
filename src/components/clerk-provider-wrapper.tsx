@@ -6,8 +6,8 @@ interface ClerkProviderWrapperProps {
   children: ReactNode
 }
 
-// For static export, we don't use Clerk at all
-// Clerk will be enabled when real keys are provided in production
+// Static export doesn't support Clerk's server actions
+// Clerk auth will work at runtime but build uses demo mode
 export function ClerkProviderWrapper({ children }: ClerkProviderWrapperProps) {
   return <>{children}</>
 }
