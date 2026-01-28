@@ -28,9 +28,9 @@ export function Navigation() {
             <Image
               src="/logo.png"
               alt="Ascendant Group"
-              width={600}
-              height={150}
-              className="h-14 md:h-16 w-auto max-w-[280px] md:max-w-[360px]"
+              width={300}
+              height={75}
+              className="w-[300px] h-auto"
               priority
             />
           </Link>

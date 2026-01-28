@@ -33,9 +33,9 @@ export function Footer() {
               <Image
                 src="/logo.png"
                 alt="Ascendant Group"
-                width={540}
-                height={135}
-                className="h-16 w-auto max-w-[320px] brightness-0 invert"
+                width={300}
+                height={75}
+                className="w-[300px] h-auto brightness-0 invert"
               />
             </div>
             <p className="text-gray-400 text-sm mb-4">
