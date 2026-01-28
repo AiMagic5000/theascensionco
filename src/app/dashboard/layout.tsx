@@ -45,8 +45,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             <Image
               src="/logo.png"
               alt="Ascendant Group"
-              width={140}
-              height={35}
+              width={420}
+              height={105}
               className="h-8 w-auto"
             />
           </Link>
@@ -80,8 +80,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               <Image
                 src="/logo.png"
                 alt="Ascendant Group"
-                width={150}
-                height={38}
+                width={450}
+                height={114}
                 className="h-9 w-auto"
               />
             </Link>

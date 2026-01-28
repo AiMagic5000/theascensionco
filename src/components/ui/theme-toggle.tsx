@@ -1,13 +1,13 @@
 "use client"
 
 import { useTheme } from "next-themes"
-import { useEffect, useState, useId } from "react"
+import { useEffect, useState } from "react"
+import { Moon, Sun } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 export function ThemeToggle({ className }: { className?: string }) {
-  const { theme, setTheme } = useTheme()
+  const { theme, setTheme, resolvedTheme } = useTheme()
   const [mounted, setMounted] = useState(false)
-  const id = useId()
 
   useEffect(() => {
     setMounted(true)
@@ -15,35 +15,39 @@ export function ThemeToggle({ className }: { className?: string }) {
 
   if (!mounted) {
     return (
-      <div className={cn("theme-toggle-container", className)}>
-        <div className="theme-toggle-label" />
-      </div>
+      <button
+        className={cn(
+          "p-2 rounded-lg bg-gray-100 dark:bg-gray-800",
+          className
+        )}
+        disabled
+      >
+        <Sun className="h-5 w-5 text-gray-400" />
+      </button>
     )
   }
 
-  const isDark = theme === "dark"
+  const isDark = resolvedTheme === "dark"
 
-  const handleToggle = () => {
-    const newTheme = isDark ? "light" : "dark"
-    setTheme(newTheme)
+  const toggleTheme = () => {
+    setTheme(isDark ? "light" : "dark")
   }
 
   return (
-    <div className={cn("theme-toggle-container", className)}>
-      <input
-        type="checkbox"
-        id={`theme-toggle-${id}`}
-        className="theme-toggle-checkbox"
-        checked={isDark}
-        onChange={handleToggle}
-        aria-label="Toggle dark mode"
-      />
-      <label
-        htmlFor={`theme-toggle-${id}`}
-        className="theme-toggle-label"
-        role="switch"
-        aria-checked={isDark}
-      />
-    </div>
+    <button
+      onClick={toggleTheme}
+      className={cn(
+        "p-2 rounded-lg transition-colors",
+        "bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700",
+        className
+      )}
+      aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
+    >
+      {isDark ? (
+        <Moon className="h-5 w-5 text-blue-400" />
+      ) : (
+        <Sun className="h-5 w-5 text-amber-500" />
+      )}
+    </button>
   )
 }
