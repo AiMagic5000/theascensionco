@@ -138,24 +138,33 @@ theascensionco/
 └── CLAUDE_SESSION.md
 ```
 
+## Deployment Status
+
+**LIVE** - Site deployed at https://theascensionco.us on 2026-01-28
+
+### Deployment Notes
+- Static export configured for Hostinger shared hosting
+- Clerk auth disabled for static build (demo mode)
+- .htaccess configured for routing, caching, and security headers
+- WordPress backup preserved in ~/backup_20260128/
+
 ## Remaining Tasks
 
 ### High Priority
-1. [ ] Create .env.local with Clerk and Cognabase keys
+1. [ ] Create Clerk account and get real API keys
 2. [ ] Set up Cognabase instance and database schema
-3. [ ] Connect Supabase client to dashboard
-4. [ ] Build static export for Hostinger
-5. [ ] Deploy to production
+3. [ ] Re-enable Clerk authentication with real keys (requires Node.js hosting or SSR)
+4. [ ] Connect Supabase client to dashboard for data persistence
 
 ### Medium Priority
-6. [ ] Add email notification system
-7. [ ] Implement transaction history
-8. [ ] Add more demo data
+5. [ ] Add email notification system
+6. [ ] Implement transaction history
+7. [ ] Add more demo data
 
 ### Low Priority
-9. [ ] Add privacy policy and terms pages
-10. [ ] Set up contact form submission
-11. [ ] Add analytics tracking
+8. [ ] Add privacy policy and terms pages
+9. [ ] Set up contact form submission
+10. [ ] Add analytics tracking (Umami)
 
 ## Environment Variables Needed
 
@@ -186,8 +195,11 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJxxx
 1. `docs: initialize project` - PROJECT.md
 2. `docs: add requirements, roadmap, and state` - Planning files
 3. `feat: add complete landing page and dashboard structure` - Full app
+4. `fix: handle Clerk auth gracefully when keys not configured` - Auth wrappers
+5. `feat: configure static export for Hostinger deployment` - Production ready
 
 ---
 
 *Session started: 2026-01-28*
 *Last updated: 2026-01-28*
+*Deployed: 2026-01-28*
