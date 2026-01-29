@@ -22,9 +22,9 @@ import {
 const sidebarLinks = [
   { href: "/dashboard", label: "Overview", icon: LayoutDashboard },
   { href: "/dashboard/credit-repair", label: "Credit Repair", icon: TrendingUp },
-  { href: "/dashboard/resources", label: "Resources", icon: BookOpen },
   { href: "/dashboard/privacy", label: "Privacy Services", icon: Shield },
   { href: "/dashboard/business", label: "Business Management", icon: Building2 },
+  { href: "/dashboard/resources", label: "Resources", icon: BookOpen },
   { href: "/dashboard/support", label: "Help & Support", icon: HelpCircle },
 ]
 
