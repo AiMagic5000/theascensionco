@@ -16,13 +16,35 @@ import {
   Menu,
   X,
   ChevronRight,
+  ChevronDown,
   TrendingUp,
+  FileCheck,
 } from "lucide-react"
 
-const sidebarLinks = [
+interface SubLink {
+  href: string
+  label: string
+  icon: React.ComponentType<{ className?: string }>
+}
+
+interface SidebarLink {
+  href: string
+  label: string
+  icon: React.ComponentType<{ className?: string }>
+  subLinks?: SubLink[]
+}
+
+const sidebarLinks: SidebarLink[] = [
   { href: "/dashboard", label: "Overview", icon: LayoutDashboard },
   { href: "/dashboard/credit-repair", label: "Credit Repair", icon: TrendingUp },
-  { href: "/dashboard/privacy", label: "Privacy Services", icon: Shield },
+  {
+    href: "/dashboard/privacy",
+    label: "Privacy Services",
+    icon: Shield,
+    subLinks: [
+      { href: "/dashboard/privacy/register-irs", label: "Register with IRS", icon: FileCheck },
+    ]
+  },
   { href: "/dashboard/business", label: "Business Management", icon: Building2 },
   { href: "/dashboard/resources", label: "Resources", icon: BookOpen },
   { href: "/dashboard/support", label: "Help & Support", icon: HelpCircle },
@@ -30,7 +52,19 @@ const sidebarLinks = [
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [expandedMenus, setExpandedMenus] = useState<string[]>([])
   const pathname = usePathname()
+
+  const toggleSubmenu = (href: string) => {
+    setExpandedMenus(prev =>
+      prev.includes(href) ? prev.filter(h => h !== href) : [...prev, href]
+    )
+  }
+
+  // Auto-expand parent menu if child is active
+  const isChildActive = (link: SidebarLink) => {
+    return link.subLinks?.some(sub => pathname === sub.href || pathname.startsWith(sub.href + '/'))
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
@@ -99,6 +133,68 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
             {sidebarLinks.map((link) => {
               const isActive = pathname === link.href
+              const hasSubLinks = link.subLinks && link.subLinks.length > 0
+              const isExpanded = expandedMenus.includes(link.href) || isChildActive(link)
+
+              if (hasSubLinks) {
+                return (
+                  <div key={link.href}>
+                    <button
+                      onClick={() => toggleSubmenu(link.href)}
+                      className={cn(
+                        "w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg transition-colors",
+                        isActive || isChildActive(link)
+                          ? "bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400"
+                          : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
+                      )}
+                    >
+                      <link.icon className="h-5 w-5" />
+                      <span className="font-medium flex-1 text-left">{link.label}</span>
+                      {isExpanded ? (
+                        <ChevronDown className="h-4 w-4" />
+                      ) : (
+                        <ChevronRight className="h-4 w-4" />
+                      )}
+                    </button>
+                    {isExpanded && (
+                      <div className="ml-4 mt-1 space-y-1 border-l-2 border-gray-200 dark:border-gray-700 pl-3">
+                        <Link
+                          href={link.href}
+                          onClick={() => setSidebarOpen(false)}
+                          className={cn(
+                            "flex items-center space-x-3 px-3 py-2 rounded-lg transition-colors text-sm",
+                            isActive
+                              ? "bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400"
+                              : "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"
+                          )}
+                        >
+                          <span>Overview</span>
+                        </Link>
+                        {link.subLinks?.map((subLink) => {
+                          const isSubActive = pathname === subLink.href
+                          return (
+                            <Link
+                              key={subLink.href}
+                              href={subLink.href}
+                              onClick={() => setSidebarOpen(false)}
+                              className={cn(
+                                "flex items-center space-x-3 px-3 py-2 rounded-lg transition-colors text-sm",
+                                isSubActive
+                                  ? "bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400"
+                                  : "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"
+                              )}
+                            >
+                              <subLink.icon className="h-4 w-4" />
+                              <span>{subLink.label}</span>
+                            </Link>
+                          )
+                        })}
+                      </div>
+                    )}
+                  </div>
+                )
+              }
+
               return (
                 <Link
                   key={link.href}
