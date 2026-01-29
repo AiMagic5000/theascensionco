@@ -2,75 +2,95 @@
 
 import { motion } from "framer-motion"
 import { Button } from "@/components/ui/button"
-import { Check, Star, Zap, Crown } from "lucide-react"
+import { Check, Star, Zap, Crown, Shield, AlertCircle } from "lucide-react"
 import Link from "next/link"
 
-// Privacy Services Packages (CPN + $250 markup)
-const privacyPackages = [
+// Credit Privacy Number Packages (CPN + $250 markup)
+const cpnPackages = [
   {
     name: "Foundation",
     price: 547,
-    description: "Essential privacy protection to get started",
+    ficoScore: "New File",
+    description: "Start fresh with a legally established credit privacy file",
     features: [
-      "New Credit Profile Setup",
-      "Public Records Submissions (100+)",
-      "Privacy Best Practices Guide",
-      "Live Phone Support",
-      "24-Hour Processing",
+      "Legally Established Credit Privacy Number",
+      "IRS Credit Partner Registration Guidance",
+      "100+ Public Records Database Submissions",
+      "Complete Privacy Documentation Package",
+      "24-Hour File Activation",
+      "Dedicated Phone Support",
     ],
+    tradelines: "Primary tradelines (self-applied)",
+    idealFor: "Those seeking a fresh financial start with rental deposits",
     popular: false,
   },
   {
     name: "Essentials",
     price: 947,
-    description: "Enhanced privacy with credit history",
+    ficoScore: "670+",
+    description: "Enhanced file with established credit history",
     features: [
-      "Everything in Foundation",
-      "1 Authorized User Tradeline ($15K-$25K)",
-      "Primary Tradeline Access",
-      "6-Month to 2-Year Credit History",
-      "670+ Credit Score Target",
+      "Everything in Foundation Package",
+      "1 Authorized User Tradeline ($15K-$25K limit)",
+      "6-Month to 2-Year Established History",
+      "Primary Tradeline Application Access",
+      "Credit Building Strategy Guide",
+      "File Monitoring Setup",
     ],
+    tradelines: "1 AU tradeline included",
+    idealFor: "Apartment rentals with reduced move-in costs",
     popular: false,
   },
   {
     name: "Professional",
     price: 1247,
-    description: "Comprehensive privacy and credit building",
+    ficoScore: "720+",
+    description: "Robust file for serious credit applications",
     features: [
-      "Everything in Essentials",
-      "2 Authorized User Accounts ($15K-$25K each)",
-      "Enhanced Purchasing Power",
-      "2-4 Year Credit History",
-      "720+ Credit Score Target",
+      "Everything in Essentials Package",
+      "2 Premium AU Accounts ($15K-$25K each)",
+      "2-4 Year Established Credit History",
+      "Enhanced Purchasing Capability",
+      "Auto Loan Qualification Support",
+      "Business Credit PG Eligibility",
     ],
+    tradelines: "2 AU tradelines included",
+    idealFor: "Credit cards, auto financing, business guarantees",
     popular: true,
   },
   {
     name: "Executive",
     price: 1847,
-    description: "Premium privacy with funding capability",
+    ficoScore: "740+",
+    description: "Premium file with high-limit tradelines",
     features: [
-      "Everything in Professional",
-      "2 Premium AU Tradelines ($50K-$75K each)",
-      "High-Limit Card Eligibility",
-      "Funding Capability Setup",
-      "740+ Credit Score Target",
+      "Everything in Professional Package",
+      "2 High-Limit AU Tradelines ($50K-$75K each)",
+      "Advanced Funding Capability",
+      "Premium Credit Card Eligibility",
+      "Business Startup Credit Access",
+      "Priority Processing & Support",
     ],
+    tradelines: "2 high-limit AU tradelines",
+    idealFor: "Business funding and premium credit lines",
     popular: false,
   },
   {
     name: "Elite",
     price: 2747,
-    description: "Maximum privacy protection and credit power",
+    ficoScore: "760+",
+    description: "Maximum credit power with seasoned history",
     features: [
-      "Everything in Executive",
+      "Everything in Executive Package",
       "4 Premium AU Tradelines ($100K-$150K each)",
-      "15-30 Year Established History",
+      "15-30 Year Seasoned Credit History",
       "150+ Public Records Submissions",
-      "760+ Credit Score Target",
-      "VIP Lender Access List",
+      "Exclusive Lender Access Directory",
+      "Wealth Building Resource Library",
+      "VIP Concierge Support",
     ],
+    tradelines: "4 premium AU tradelines",
+    idealFor: "Maximum funding potential and wealth building",
     popular: false,
   },
 ]
@@ -170,21 +190,48 @@ export function Packages() {
           className="text-center mb-16"
         >
           <h2 className="text-3xl sm:text-4xl font-bold text-gray-900">
-            Choose Your Path to Success
+            Choose Your Path to Financial Freedom
           </h2>
           <p className="mt-4 text-lg text-gray-600 max-w-2xl mx-auto">
-            Select the package that best fits your goals. All packages include expert guidance
-            and dedicated support throughout your journey.
+            Our Credit Privacy Numbers are legally established identifiers with standing in commerce.
+            Each package includes expert guidance and dedicated support throughout your journey.
           </p>
         </motion.div>
 
-        {/* Privacy Services */}
+        {/* CPN Notice */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          className="mb-12 max-w-4xl mx-auto"
+        >
+          <div className="bg-blue-50 border border-blue-200 rounded-xl p-6">
+            <div className="flex items-start gap-4">
+              <div className="flex-shrink-0">
+                <Shield className="h-8 w-8 text-blue-600" />
+              </div>
+              <div>
+                <h4 className="text-lg font-semibold text-blue-900 mb-2">
+                  About Our Credit Privacy Numbers
+                </h4>
+                <p className="text-blue-800 text-sm leading-relaxed">
+                  Every Credit Privacy Number we provide undergoes rigorous verification to confirm it has no prior associations with other entities. Our comprehensive forensic audit process identifies any existing financial activity before issuance. Under established commercial law, no party holds exclusive rights to any 9-digit identifier unless it has been formally registered as a credit partner in commerce. This means we can verify whether any number - whether previously linked to a Social Security Number or another Credit Privacy Number - has any prior activity before you receive it.
+                </p>
+                <p className="text-blue-800 text-sm leading-relaxed mt-3">
+                  <strong>IRS Registration:</strong> For additional security and legal standing, we provide guidance on registering your new credit profile number with the IRS as a credit partner. This establishes your number with full legal status in commerce.
+                </p>
+              </div>
+            </div>
+          </div>
+        </motion.div>
+
+        {/* CPN Packages */}
         <div className="mb-20">
           <h3 className="text-2xl font-bold text-gray-900 mb-8 text-center">
-            Privacy Protection Packages
+            Credit Privacy Number Packages
           </h3>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
-            {privacyPackages.map((pkg, index) => (
+            {cpnPackages.map((pkg, index) => (
               <motion.div
                 key={index}
                 initial={{ opacity: 0, y: 20 }}
@@ -207,7 +254,13 @@ export function Packages() {
                 <h4 className="text-lg font-semibold text-gray-900">
                   {pkg.name}
                 </h4>
-                <div className="mt-2">
+
+                {/* FICO Score Badge */}
+                <div className="mt-2 inline-flex items-center px-3 py-1 rounded-full bg-green-100 text-green-800 text-sm font-medium">
+                  FICO: {pkg.ficoScore}
+                </div>
+
+                <div className="mt-3">
                   <span className="text-3xl font-bold text-gray-900">
                     ${pkg.price.toLocaleString()}
                   </span>
@@ -215,6 +268,12 @@ export function Packages() {
                 <p className="mt-2 text-sm text-gray-600">
                   {pkg.description}
                 </p>
+
+                {/* Tradelines Info */}
+                <div className="mt-3 text-xs text-blue-600 font-medium">
+                  {pkg.tradelines}
+                </div>
+
                 <ul className="mt-4 space-y-2">
                   {pkg.features.map((feature, i) => (
                     <li key={i} className="flex items-start text-sm">
@@ -223,7 +282,15 @@ export function Packages() {
                     </li>
                   ))}
                 </ul>
-                <Link href="/sign-up" className="block mt-6">
+
+                {/* Ideal For */}
+                <div className="mt-4 pt-4 border-t border-gray-100">
+                  <p className="text-xs text-gray-500">
+                    <strong>Ideal for:</strong> {pkg.idealFor}
+                  </p>
+                </div>
+
+                <Link href="/sign-up" className="block mt-4">
                   <Button
                     variant={pkg.popular ? "default" : "outline"}
                     className="w-full"
@@ -234,6 +301,11 @@ export function Packages() {
               </motion.div>
             ))}
           </div>
+
+          {/* Payment Options Note */}
+          <p className="text-center text-sm text-gray-500 mt-6">
+            Payment plans available. Contact us for financing options on all packages.
+          </p>
         </div>
 
         {/* Business Packages */}
