@@ -28,6 +28,7 @@ import {
   Folder,
   FolderOpen,
   ChevronRight,
+  Info,
   ChevronDown,
   Search,
   Grid,
@@ -1533,6 +1534,37 @@ export default function BusinessPage() {
         </>
       ) : (
         <>
+          {/* Getting Started Banner - Show when no documents uploaded */}
+          {files.length === 0 && (
+            <Card className="bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 border-blue-200 dark:border-blue-800">
+              <CardContent className="py-6">
+                <div className="flex items-start gap-4">
+                  <div className="flex-shrink-0 w-12 h-12 bg-blue-100 dark:bg-blue-800 rounded-full flex items-center justify-center">
+                    <Info className="h-6 w-6 text-blue-600 dark:text-blue-300" />
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+                      Getting Started with Business Management
+                    </h3>
+                    <p className="text-gray-600 dark:text-gray-300 mb-4">
+                      Follow these steps to auto-populate your business data:
+                    </p>
+                    <ol className="list-decimal list-inside space-y-2 text-sm text-gray-600 dark:text-gray-300 mb-4">
+                      <li><strong>Go to the Documents tab</strong> - Click "Documents" in the top right</li>
+                      <li><strong>Upload your business files</strong> - Upload your data files, spreadsheets, or documents from your business buildout</li>
+                      <li><strong>Return to Profile & Accounts</strong> - Come back to this tab</li>
+                      <li><strong>Click "Populate with AI"</strong> - The AI will scan your documents and automatically fill in your business profile and accounts</li>
+                    </ol>
+                    <Button onClick={() => setActiveTab("documents")} className="bg-blue-600 hover:bg-blue-700">
+                      <Upload className="mr-2 h-4 w-4" />
+                      Go to Documents
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
           {/* Business Profile */}
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
@@ -1544,25 +1576,36 @@ export default function BusinessPage() {
                 <CardDescription>Your business information and D&B tracking</CardDescription>
               </div>
               <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handlePopulateWithAI}
-                  disabled={aiProcessing || files.length === 0}
-                  className="bg-gradient-to-r from-purple-500 to-blue-500 text-white border-0 hover:from-purple-600 hover:to-blue-600 disabled:opacity-50"
-                >
-                  {aiProcessing ? (
-                    <>
-                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
-                      Processing...
-                    </>
-                  ) : (
-                    <>
-                      <Sparkles className="mr-2 h-4 w-4" />
-                      Populate with AI
-                    </>
-                  )}
-                </Button>
+                <div className="relative group">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handlePopulateWithAI}
+                    disabled={aiProcessing || files.length === 0}
+                    className="bg-gradient-to-r from-purple-500 to-blue-500 text-white border-0 hover:from-purple-600 hover:to-blue-600 disabled:opacity-50"
+                  >
+                    {aiProcessing ? (
+                      <>
+                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
+                        Processing...
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="mr-2 h-4 w-4" />
+                        Populate with AI
+                      </>
+                    )}
+                  </Button>
+                  <button className="ml-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+                    <Info className="h-4 w-4" />
+                  </button>
+                  {/* Tooltip */}
+                  <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-900 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none w-64 z-50">
+                    <p className="font-semibold mb-1">Auto-fill Business Profile</p>
+                    <p>Scans your uploaded documents to extract company name, EIN, DUNS, state of formation, and industry information.</p>
+                    <div className="absolute top-full left-1/2 transform -translate-x-1/2 border-4 border-transparent border-t-gray-900"></div>
+                  </div>
+                </div>
                 <Button
                   variant="outline"
                   size="sm"
@@ -1752,25 +1795,36 @@ export default function BusinessPage() {
                 <CardDescription>Manage your business accounts</CardDescription>
               </div>
               <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handlePopulateWithAI}
-                  disabled={aiProcessing || files.length === 0}
-                  className="bg-gradient-to-r from-purple-500 to-blue-500 text-white border-0 hover:from-purple-600 hover:to-blue-600 disabled:opacity-50"
-                >
-                  {aiProcessing ? (
-                    <>
-                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
-                      Processing...
-                    </>
-                  ) : (
-                    <>
-                      <Sparkles className="mr-2 h-4 w-4" />
-                      Populate with AI
-                    </>
-                  )}
-                </Button>
+                <div className="relative group">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handlePopulateWithAI}
+                    disabled={aiProcessing || files.length === 0}
+                    className="bg-gradient-to-r from-purple-500 to-blue-500 text-white border-0 hover:from-purple-600 hover:to-blue-600 disabled:opacity-50"
+                  >
+                    {aiProcessing ? (
+                      <>
+                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
+                        Processing...
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="mr-2 h-4 w-4" />
+                        Populate with AI
+                      </>
+                    )}
+                  </Button>
+                  <button className="ml-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+                    <Info className="h-4 w-4" />
+                  </button>
+                  {/* Tooltip */}
+                  <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-900 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none w-64 z-50">
+                    <p className="font-semibold mb-1">Auto-detect Accounts</p>
+                    <p>Scans your uploaded documents to find bank accounts, credit cards, loans, and lines of credit mentioned in your business files.</p>
+                    <div className="absolute top-full left-1/2 transform -translate-x-1/2 border-4 border-transparent border-t-gray-900"></div>
+                  </div>
+                </div>
                 <Button onClick={() => setShowAddAccount(true)}>
                   <Plus className="mr-2 h-4 w-4" />
                   Add Account

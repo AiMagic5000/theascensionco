@@ -175,12 +175,11 @@ export async function POST(request: NextRequest) {
     // Prepare document summaries for AI processing
     const documentSummaries = validDocs
       .map((doc, index) => {
-        // Truncate content to avoid token limits
-        const truncatedContent = doc.content.substring(0, 5000)
-        return `Document ${index + 1}: ${doc.fileName} (${doc.type})
-Content:
+        // Increase content limit for better extraction
+        const truncatedContent = doc.content.substring(0, 8000)
+        return `=== Document ${index + 1}: ${doc.fileName} ===
 ${truncatedContent}
----`
+=== END Document ${index + 1} ===`
       })
       .join("\n\n")
 
@@ -199,68 +198,64 @@ ${truncatedContent}
         messages: [
           {
             role: "system",
-            content: `You are a business document analyzer specializing in extracting structured business data. Analyze uploaded documents thoroughly to extract ALL business information.
+            content: `You are an expert business document analyzer. Your job is to extract EVERY piece of business and financial information from documents.
 
-CRITICAL: Extract EVERY piece of business data you can find, including:
+## EXTRACTION PRIORITY - ACCOUNTS ARE MOST IMPORTANT
 
-1. **Company Information:**
-   - Company/Business Name (legal name, DBA, trade names)
-   - EIN (Tax ID) - format: XX-XXXXXXX
-   - DUNS Number - format: XX-XXX-XXXX
-   - State of Formation/Incorporation
-   - Business Address
-   - Industry/Business Type
-   - Date of Formation
+**CRITICAL: You MUST extract ALL accounts mentioned in any document.** If you see ANY of these, create an account entry:
+- Any bank name (Chase, Bank of America, Wells Fargo, Capital One, Citi, PNC, US Bank, TD Bank, Fifth Third, Regions, etc.)
+- Any account type mention (checking, savings, business account, money market, CD, credit card, line of credit, loan, merchant account)
+- Any account number pattern (even partial like ****1234 or ending in XXXX)
+- Any credit card mention (Visa, Mastercard, Amex, Discover, store cards)
+- Any business credit account (Net-30, Net-60, tradelines, vendor credit)
+- Any loan (SBA, term loan, equipment financing, vehicle loan, mortgage)
+- Email hosting accounts, domain registrations, business software subscriptions
+- Virtual mailbox, registered agent accounts
+- Business insurance policies
 
-2. **Financial Accounts (IMPORTANT - Extract ALL):**
-   Look for ANY mention of bank accounts, credit lines, loans, or financial institutions:
-   - Bank account names and numbers (mask as ****1234)
-   - Account types: Checking, Savings, Money Market, Line of Credit, Credit Card, Loan
-   - Bank/Institution names (Chase, Bank of America, Wells Fargo, etc.)
-   - Account balances (if visible)
-   - Credit limits
-   - Business vs Personal designation
+## Company Information to Extract:
+- Company/Business Name (legal name, DBA, trade names)
+- EIN (Tax ID) - format: XX-XXXXXXX or XX-XXXXXXX
+- DUNS Number - format: XX-XXX-XXXX
+- State of Formation/Incorporation
+- Industry/Business Type
+- PAYDEX Score (0-100)
 
-3. **Credit Information:**
-   - PAYDEX Score (0-100)
-   - Business credit scores
-   - Trade references
-   - Payment history mentions
-
-4. **Document Organization:**
-   Suggest folders: Legal Documents, Tax Documents, Contracts, Financial Statements, Bank Statements, Credit Reports, Licenses & Permits, Insurance, or create new relevant folders.
-
-Return JSON with this structure:
+## JSON Response Format:
 {
   "companyName": "string or null",
   "ein": "string or null",
   "dunsNumber": "string or null",
   "stateOfFormation": "string or null",
   "industry": "string or null",
-  "paydexScore": "number 0-100 or null",
+  "paydexScore": number or null,
   "accounts": [
     {
-      "name": "Descriptive Account Name",
+      "name": "Descriptive Account Name (e.g., 'Chase Business Checking')",
       "type": "business",
-      "category": "Checking|Savings|Credit Card|Line of Credit|Loan|Money Market",
+      "category": "Checking|Savings|Credit Card|Line of Credit|Loan|Money Market|Net-30|Email|Domain|Insurance|Other",
       "balance": 0,
-      "institution": "Bank Name",
-      "accountNumber": "****1234"
+      "institution": "Bank or Company Name",
+      "accountNumber": "****1234 or N/A"
     }
   ],
-  "suggestedFolders": [
-    {
-      "fileName": "document.pdf",
-      "suggestedFolder": "Folder Name"
-    }
-  ]
+  "suggestedFolders": []
 }
 
-IMPORTANT: Be thorough. If you see ANY account numbers, bank names, or financial references, include them in the accounts array. Even partial information is valuable. Return valid JSON only.`,
+## IMPORTANT RULES:
+1. Extract EVERY account you find - err on the side of including too many
+2. If you see a bank name + any account reference = create an account entry
+3. For spreadsheets/CSV data, extract EACH row as a separate account if applicable
+4. Include email accounts (Google Workspace, Microsoft 365, Hostinger, etc.)
+5. Include domain registrations as accounts
+6. Include virtual office/mailbox services as accounts
+7. If balance is not specified, use 0
+8. If account number is not visible, use "N/A"
+9. Return VALID JSON only - no markdown, no explanation text`,
           },
           {
             role: "user",
-            content: `Please analyze these business documents and extract relevant information:\n\n${documentSummaries}`,
+            content: `Extract ALL business information and EVERY account from these documents. Be thorough - if you see any bank, credit card, loan, or service account mentioned, include it:\n\n${documentSummaries}`,
           },
         ],
         response_format: { type: "json_object" },
