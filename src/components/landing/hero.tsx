@@ -28,7 +28,8 @@ function AnimatedBackground() {
     <div className="absolute inset-0 overflow-hidden pointer-events-none">
       {/* Animated gradient orbs */}
       <motion.div
-        className="absolute w-96 h-96 bg-blue-300/40 rounded-full blur-3xl"
+        className="absolute w-96 h-96 bg-blue-300/50 rounded-full blur-3xl"
+        initial={{ x: 0, y: 0 }}
         animate={{
           x: [0, 100, 50, 0],
           y: [0, 50, 100, 0],
@@ -41,7 +42,8 @@ function AnimatedBackground() {
         style={{ top: "10%", left: "5%" }}
       />
       <motion.div
-        className="absolute w-80 h-80 bg-purple-300/35 rounded-full blur-3xl"
+        className="absolute w-80 h-80 bg-purple-300/45 rounded-full blur-3xl"
+        initial={{ x: 0, y: 0 }}
         animate={{
           x: [0, -80, -40, 0],
           y: [0, 80, 40, 0],
@@ -54,7 +56,8 @@ function AnimatedBackground() {
         style={{ top: "50%", right: "10%" }}
       />
       <motion.div
-        className="absolute w-72 h-72 bg-indigo-300/30 rounded-full blur-3xl"
+        className="absolute w-72 h-72 bg-indigo-300/40 rounded-full blur-3xl"
+        initial={{ x: 0, y: 0 }}
         animate={{
           x: [0, 60, -30, 0],
           y: [0, -60, 30, 0],
@@ -73,9 +76,10 @@ function AnimatedBackground() {
           key={index}
           className="absolute"
           style={{ left: item.x, top: item.y }}
+          initial={{ y: 0, opacity: 0.2 }}
           animate={{
             y: [-10, 10, -10],
-            opacity: [0.15, 0.25, 0.15],
+            opacity: [0.2, 0.35, 0.2],
           }}
           transition={{
             duration: item.duration,
@@ -84,7 +88,7 @@ function AnimatedBackground() {
             ease: "easeInOut",
           }}
         >
-          <item.Icon className="w-6 h-6 md:w-8 md:h-8 text-blue-300" />
+          <item.Icon className="w-8 h-8 md:w-10 md:h-10 text-blue-400" />
         </motion.div>
       ))}
 
