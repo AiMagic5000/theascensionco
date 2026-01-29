@@ -128,6 +128,8 @@ export default function BusinessPage() {
   const [isDragging, setIsDragging] = useState(false)
   const [uploadProgress, setUploadProgress] = useState<Record<string, number>>({})
   const [showAiUpload, setShowAiUpload] = useState(false)
+  const [aiProcessing, setAiProcessing] = useState(false)
+  const [pendingFiles, setPendingFiles] = useState<File[]>([])
   const fileInputRef = useRef<HTMLInputElement>(null)
   const folderInputRef = useRef<HTMLInputElement>(null)
 
@@ -208,10 +210,132 @@ export default function BusinessPage() {
   const handleFolderUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const uploadedFiles = Array.from(e.target.files || [])
     if (uploadedFiles.length > 0) {
+      setPendingFiles(uploadedFiles)
       setShowAiUpload(true)
-      // Handle bulk folder upload with AI processing option
-      handleFileUpload(uploadedFiles)
     }
+  }
+
+  const handleAiProcess = async () => {
+    if (pendingFiles.length === 0) return
+
+    setAiProcessing(true)
+
+    // First upload the files normally
+    handleFileUpload(pendingFiles)
+
+    // Read file contents for AI processing
+    const documentPromises = pendingFiles.slice(0, 10).map(async (file) => {
+      // Only process text-based documents
+      if (
+        file.type.includes("pdf") ||
+        file.type.includes("text") ||
+        file.type.includes("word") ||
+        file.type.includes("document") ||
+        file.name.endsWith(".txt") ||
+        file.name.endsWith(".csv")
+      ) {
+        try {
+          const text = await file.text()
+          return {
+            fileName: file.name,
+            content: text,
+            type: file.type,
+          }
+        } catch {
+          return null
+        }
+      }
+      return {
+        fileName: file.name,
+        content: `[Binary file: ${file.name}]`,
+        type: file.type,
+      }
+    })
+
+    const documents = (await Promise.all(documentPromises)).filter(Boolean)
+
+    if (documents.length > 0) {
+      try {
+        const response = await fetch("/api/process-documents", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ documents }),
+        })
+
+        if (response.ok) {
+          const result = await response.json()
+          if (result.success && result.data) {
+            const data = result.data
+
+            // Auto-populate business profile
+            setBusinessProfile((prev) => ({
+              ...prev,
+              companyName: data.companyName || prev.companyName,
+              ein: data.ein || prev.ein,
+              dunsNumber: data.dunsNumber || prev.dunsNumber,
+              stateOfFormation: data.stateOfFormation || prev.stateOfFormation,
+              industry: data.industry || prev.industry,
+              paydexScore: data.paydexScore || prev.paydexScore,
+            }))
+
+            // Auto-add accounts if found
+            if (data.accounts && data.accounts.length > 0) {
+              const newAccounts = data.accounts.map((acc: Account, index: number) => ({
+                ...acc,
+                id: Date.now().toString() + index,
+              }))
+              setAccounts((prev) => [...prev, ...newAccounts])
+            }
+
+            // Create suggested folders
+            if (data.suggestedFolders) {
+              const existingFolderNames = folders.map((f) => f.name.toLowerCase())
+              const newFolderNames = new Set<string>()
+
+              data.suggestedFolders.forEach((sf: { suggestedFolder: string }) => {
+                const folderName = sf.suggestedFolder
+                if (
+                  folderName &&
+                  !existingFolderNames.includes(folderName.toLowerCase()) &&
+                  !newFolderNames.has(folderName.toLowerCase())
+                ) {
+                  newFolderNames.add(folderName.toLowerCase())
+                  setFolders((prev) => [
+                    ...prev,
+                    {
+                      id: Date.now().toString() + Math.random(),
+                      name: folderName,
+                      parentId: null,
+                      createdAt: new Date(),
+                    },
+                  ])
+                }
+              })
+            }
+
+            // Mark files as AI processed
+            setFiles((prev) =>
+              prev.map((f) => ({
+                ...f,
+                aiProcessed: true,
+              }))
+            )
+          }
+        }
+      } catch (error) {
+        console.error("AI processing failed:", error)
+      }
+    }
+
+    setAiProcessing(false)
+    setShowAiUpload(false)
+    setPendingFiles([])
+  }
+
+  const handleSkipAiProcessing = () => {
+    handleFileUpload(pendingFiles)
+    setShowAiUpload(false)
+    setPendingFiles([])
   }
 
   const handleDeleteFile = (fileId: string) => {
@@ -705,7 +829,7 @@ export default function BusinessPage() {
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
                 className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
-                onClick={() => setShowAiUpload(false)}
+                onClick={() => !aiProcessing && setShowAiUpload(false)}
               >
                 <motion.div
                   initial={{ scale: 0.9, opacity: 0 }}
@@ -716,32 +840,84 @@ export default function BusinessPage() {
                 >
                   <div className="flex items-center gap-3 mb-4">
                     <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-blue-500 rounded-xl flex items-center justify-center">
-                      <Sparkles className="h-6 w-6 text-white" />
+                      {aiProcessing ? (
+                        <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      ) : (
+                        <Sparkles className="h-6 w-6 text-white" />
+                      )}
                     </div>
                     <div>
-                      <h3 className="text-lg font-semibold text-gray-900 dark:text-white">AI Document Processing</h3>
-                      <p className="text-sm text-gray-500">Automatically extract and organize data</p>
+                      <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                        {aiProcessing ? "Processing Documents..." : "AI Document Processing"}
+                      </h3>
+                      <p className="text-sm text-gray-500">
+                        {aiProcessing
+                          ? `Analyzing ${pendingFiles.length} files with Kimi K2.5`
+                          : `${pendingFiles.length} files ready for processing`}
+                      </p>
                     </div>
                   </div>
-                  <div className="space-y-3 mb-6">
-                    <div className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                      <CheckCircle className="h-5 w-5 text-green-500" />
-                      <span className="text-sm text-gray-700 dark:text-gray-300">Extract company information from documents</span>
+
+                  {aiProcessing ? (
+                    <div className="space-y-3 mb-6">
+                      <div className="flex items-center gap-3 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                        <Clock className="h-5 w-5 text-blue-500 animate-pulse" />
+                        <span className="text-sm text-gray-700 dark:text-gray-300">Extracting business information...</span>
+                      </div>
+                      <div className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg opacity-50">
+                        <Clock className="h-5 w-5 text-gray-400" />
+                        <span className="text-sm text-gray-500">Categorizing documents...</span>
+                      </div>
+                      <div className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg opacity-50">
+                        <Clock className="h-5 w-5 text-gray-400" />
+                        <span className="text-sm text-gray-500">Populating dashboard...</span>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                      <CheckCircle className="h-5 w-5 text-green-500" />
-                      <span className="text-sm text-gray-700 dark:text-gray-300">Auto-categorize files into folders</span>
+                  ) : (
+                    <div className="space-y-3 mb-6">
+                      <div className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                        <CheckCircle className="h-5 w-5 text-green-500" />
+                        <span className="text-sm text-gray-700 dark:text-gray-300">Extract company name, EIN, DUNS from documents</span>
+                      </div>
+                      <div className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                        <CheckCircle className="h-5 w-5 text-green-500" />
+                        <span className="text-sm text-gray-700 dark:text-gray-300">Auto-categorize files into appropriate folders</span>
+                      </div>
+                      <div className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                        <CheckCircle className="h-5 w-5 text-green-500" />
+                        <span className="text-sm text-gray-700 dark:text-gray-300">Detect bank accounts and financial data</span>
+                      </div>
+                      <div className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                        <CheckCircle className="h-5 w-5 text-green-500" />
+                        <span className="text-sm text-gray-700 dark:text-gray-300">Populate business profile automatically</span>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                      <CheckCircle className="h-5 w-5 text-green-500" />
-                      <span className="text-sm text-gray-700 dark:text-gray-300">Populate business profile automatically</span>
-                    </div>
-                  </div>
+                  )}
+
                   <div className="flex justify-end gap-2">
-                    <Button variant="outline" onClick={() => setShowAiUpload(false)}>Skip AI Processing</Button>
-                    <Button className="bg-gradient-to-r from-purple-600 to-blue-600" onClick={() => setShowAiUpload(false)}>
-                      <Sparkles className="h-4 w-4 mr-2" />
-                      Process with AI
+                    <Button
+                      variant="outline"
+                      onClick={handleSkipAiProcessing}
+                      disabled={aiProcessing}
+                    >
+                      Skip AI Processing
+                    </Button>
+                    <Button
+                      className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700"
+                      onClick={handleAiProcess}
+                      disabled={aiProcessing}
+                    >
+                      {aiProcessing ? (
+                        <>
+                          <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
+                          Processing...
+                        </>
+                      ) : (
+                        <>
+                          <Sparkles className="h-4 w-4 mr-2" />
+                          Process with AI
+                        </>
+                      )}
                     </Button>
                   </div>
                 </motion.div>
