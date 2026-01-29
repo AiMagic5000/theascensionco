@@ -21,6 +21,19 @@ interface ExtractedBusinessInfo {
     balance: number
     institution: string
     accountNumber: string
+    url?: string
+    username?: string
+    password?: string
+    address?: string
+    city?: string
+    state?: string
+    zip?: string
+    entityId?: string
+    jurisdiction?: string
+    agentName?: string
+    phone?: string
+    email?: string
+    notes?: string
   }>
   suggestedFolders?: Array<{
     fileName: string
@@ -210,12 +223,16 @@ ${truncatedContent}
 - Any business credit account (Net-30, Net-60, tradelines, vendor credit)
 - Any loan (SBA, term loan, equipment financing, vehicle loan, mortgage)
 - Email hosting accounts, domain registrations, business software subscriptions
-- Virtual mailbox, registered agent accounts
+- Virtual mailbox services (Anytime Mailbox, iPostal1, etc.)
+- Registered agent services (with entity ID, jurisdiction)
+- Secretary of State filings (SOS)
+- EIN/Tax ID registrations
+- WordPress/website logins
 - Business insurance policies
 
 ## Company Information to Extract:
 - Company/Business Name (legal name, DBA, trade names)
-- EIN (Tax ID) - format: XX-XXXXXXX or XX-XXXXXXX
+- EIN (Tax ID) - format: XX-XXXXXXX
 - DUNS Number - format: XX-XXX-XXXX
 - State of Formation/Incorporation
 - Industry/Business Type
@@ -231,12 +248,25 @@ ${truncatedContent}
   "paydexScore": number or null,
   "accounts": [
     {
-      "name": "Descriptive Account Name (e.g., 'Chase Business Checking')",
+      "name": "Descriptive Account Name (e.g., 'Chase Business Checking', 'Hostinger Email', 'NM Registered Agent')",
       "type": "business",
-      "category": "Checking|Savings|Credit Card|Line of Credit|Loan|Money Market|Net-30|Email|Domain|Insurance|Other",
+      "category": "Checking|Savings|Credit Card|Line of Credit|Loan|Money Market|Net-30|Net-60|Tradeline|Email|Domain|Hosting|WordPress|Mailbox|Registered Agent|SOS|EIN|Insurance|Other",
       "balance": 0,
       "institution": "Bank or Company Name",
-      "accountNumber": "****1234 or N/A"
+      "accountNumber": "****1234 or N/A",
+      "url": "https://login-url.com or null",
+      "username": "login username/email or null",
+      "password": "password if visible or null",
+      "address": "full street address or null",
+      "city": "city or null",
+      "state": "state abbreviation or null",
+      "zip": "zip code or null",
+      "entityId": "entity/filing ID or null",
+      "jurisdiction": "state/jurisdiction or null",
+      "agentName": "registered agent name or null",
+      "phone": "phone number or null",
+      "email": "email address or null",
+      "notes": "any additional info or null"
     }
   ],
   "suggestedFolders": []
@@ -248,10 +278,13 @@ ${truncatedContent}
 3. For spreadsheets/CSV data, extract EACH row as a separate account if applicable
 4. Include email accounts (Google Workspace, Microsoft 365, Hostinger, etc.)
 5. Include domain registrations as accounts
-6. Include virtual office/mailbox services as accounts
-7. If balance is not specified, use 0
-8. If account number is not visible, use "N/A"
-9. Return VALID JSON only - no markdown, no explanation text`,
+6. Include virtual office/mailbox services with full address
+7. Include registered agent accounts with entity ID and jurisdiction
+8. Include WordPress/website logins with URL, username, password
+9. Include Secretary of State filings with login URL and entity ID
+10. If balance is not specified, use 0
+11. If a field is not found, use null (not empty string)
+12. Return VALID JSON only - no markdown, no explanation text`,
           },
           {
             role: "user",

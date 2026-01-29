@@ -1,6 +1,7 @@
 "use client"
 
-import { useState, useCallback, useRef, useEffect } from "react"
+import { useState, useCallback, useRef, useEffect, useMemo, Suspense } from "react"
+import { useSearchParams } from "next/navigation"
 import { motion, AnimatePresence } from "framer-motion"
 import { useUser } from "@clerk/nextjs"
 import { supabase } from "@/lib/supabase"
@@ -74,6 +75,21 @@ interface Account {
   balance: number
   institution: string
   accountNumber: string
+  // Dynamic fields for different account types
+  url?: string
+  username?: string
+  password?: string
+  address?: string
+  city?: string
+  state?: string
+  zip?: string
+  entityId?: string
+  jurisdiction?: string
+  agentName?: string
+  phone?: string
+  email?: string
+  notes?: string
+  [key: string]: string | number | boolean | undefined // Allow additional dynamic fields
 }
 
 // Empty business profile - to be populated by user or AI
@@ -115,9 +131,22 @@ function formatFileSize(bytes: number): string {
   return (bytes / (1024 * 1024)).toFixed(1) + " MB"
 }
 
-export default function BusinessPage() {
+function BusinessPageContent() {
   const { user, isLoaded } = useUser()
-  const [activeTab, setActiveTab] = useState<"profile" | "documents">("profile")
+  const searchParams = useSearchParams()
+  const tabFromUrl = searchParams.get("tab")
+  const [activeTab, setActiveTab] = useState<"profile" | "documents">(
+    tabFromUrl === "documents" ? "documents" : "profile"
+  )
+
+  // Sync tab with URL when it changes
+  useEffect(() => {
+    if (tabFromUrl === "documents") {
+      setActiveTab("documents")
+    } else if (tabFromUrl === "profile") {
+      setActiveTab("profile")
+    }
+  }, [tabFromUrl])
   const [businessProfile, setBusinessProfile] = useState(initialBusinessProfile)
   const [accounts, setAccounts] = useState(initialAccounts)
   const [editingProfile, setEditingProfile] = useState(false)
@@ -197,6 +226,20 @@ export default function BusinessPage() {
             balance: Number(a.balance) || 0,
             institution: a.institution || '',
             accountNumber: a.account_number || '',
+            // Dynamic fields
+            url: a.url || '',
+            username: a.username || '',
+            password: a.password || '',
+            address: a.address || '',
+            city: a.city || '',
+            state: a.state || '',
+            zip: a.zip || '',
+            entityId: a.entity_id || '',
+            jurisdiction: a.jurisdiction || '',
+            agentName: a.agent_name || '',
+            phone: a.phone || '',
+            email: a.email || '',
+            notes: a.notes || '',
           })))
         }
 
@@ -304,6 +347,20 @@ export default function BusinessPage() {
           balance: account.balance,
           institution: account.institution,
           account_number: account.accountNumber,
+          // Dynamic fields
+          url: account.url || null,
+          username: account.username || null,
+          password: account.password || null,
+          address: account.address || null,
+          city: account.city || null,
+          state: account.state || null,
+          zip: account.zip || null,
+          entity_id: account.entityId || null,
+          jurisdiction: account.jurisdiction || null,
+          agent_name: account.agentName || null,
+          phone: account.phone || null,
+          email: account.email || null,
+          notes: account.notes || null,
         })
         .select()
 
@@ -630,10 +687,23 @@ export default function BusinessPage() {
                 id: crypto.randomUUID(),
                 name: acc.name || "Unnamed Account",
                 type: (acc.type === "personal" ? "personal" : "business") as "business" | "personal",
-                category: acc.category || "Checking",
+                category: acc.category || "Other",
                 balance: Number(acc.balance) || 0,
                 institution: acc.institution || "",
                 accountNumber: acc.accountNumber || "",
+                url: acc.url || "",
+                username: acc.username || "",
+                password: acc.password || "",
+                address: acc.address || "",
+                city: acc.city || "",
+                state: acc.state || "",
+                zip: acc.zip || "",
+                entityId: acc.entityId || "",
+                jurisdiction: acc.jurisdiction || "",
+                agentName: acc.agentName || "",
+                phone: acc.phone || "",
+                email: acc.email || "",
+                notes: acc.notes || "",
               }))
               console.log("Processed accounts:", newAccounts)
               setAccounts((prev) => [...prev, ...newAccounts])
@@ -891,10 +961,23 @@ export default function BusinessPage() {
               id: crypto.randomUUID(),
               name: acc.name || "Unnamed Account",
               type: (acc.type === "personal" ? "personal" : "business") as "business" | "personal",
-              category: acc.category || "Checking",
+              category: acc.category || "Other",
               balance: Number(acc.balance) || 0,
               institution: acc.institution || "",
               accountNumber: acc.accountNumber || "",
+              url: acc.url || "",
+              username: acc.username || "",
+              password: acc.password || "",
+              address: acc.address || "",
+              city: acc.city || "",
+              state: acc.state || "",
+              zip: acc.zip || "",
+              entityId: acc.entityId || "",
+              jurisdiction: acc.jurisdiction || "",
+              agentName: acc.agentName || "",
+              phone: acc.phone || "",
+              email: acc.email || "",
+              notes: acc.notes || "",
             }))
 
             setAccounts((prev) => [...prev, ...newAccounts])
@@ -1359,18 +1442,79 @@ export default function BusinessPage() {
                        selectedFile.name.endsWith(".csv") ||
                        selectedFile.name.endsWith(".md") ||
                        selectedFile.name.endsWith(".json") ? (
-                      <div className="p-4 h-full">
+                      <div className="p-4 h-full flex flex-col">
                         {selectedFile.content ? (
-                          <pre className="whitespace-pre-wrap font-mono text-sm text-gray-800 dark:text-gray-200 bg-white dark:bg-gray-900 p-4 rounded-lg h-full overflow-auto">
+                          <pre className="whitespace-pre-wrap font-mono text-sm text-gray-800 dark:text-gray-200 bg-white dark:bg-gray-900 p-4 rounded-lg flex-1 overflow-auto">
                             {selectedFile.content}
                           </pre>
                         ) : (
                           <div className="flex flex-col items-center justify-center h-full text-gray-500">
                             <FileText className="h-24 w-24 mb-4 text-gray-400" />
                             <p className="text-lg font-medium mb-2">Text Preview</p>
-                            <p className="text-sm text-gray-400">Loading content...</p>
+                            <p className="text-sm text-gray-400 mb-4">Content not available for preview</p>
+                            {selectedFile.blobUrl && (
+                              <Button
+                                className="bg-[#D4A84B] hover:bg-[#c49a3f] text-white"
+                                onClick={() => {
+                                  if (selectedFile.blobUrl) {
+                                    const link = document.createElement('a')
+                                    link.href = selectedFile.blobUrl
+                                    link.download = selectedFile.name
+                                    document.body.appendChild(link)
+                                    link.click()
+                                    document.body.removeChild(link)
+                                  }
+                                }}
+                              >
+                                <Download className="h-4 w-4 mr-2" />
+                                Download to View
+                              </Button>
+                            )}
                           </div>
                         )}
+                      </div>
+                    ) : selectedFile.type.includes("sheet") || selectedFile.type.includes("excel") || selectedFile.name.endsWith(".xlsx") || selectedFile.name.endsWith(".xls") || selectedFile.name.endsWith(".csv") ? (
+                      <div className="p-4 h-full">
+                        <div className="bg-white dark:bg-gray-900 rounded-lg p-6 h-full overflow-auto">
+                          <div className="flex items-center gap-3 mb-4 pb-4 border-b border-gray-200 dark:border-gray-700">
+                            <FileSpreadsheet className="h-8 w-8 text-green-500" />
+                            <div>
+                              <h4 className="font-semibold text-gray-900 dark:text-white">{selectedFile.name}</h4>
+                              <p className="text-sm text-gray-500">Spreadsheet • {formatFileSize(selectedFile.size)}</p>
+                            </div>
+                          </div>
+                          {selectedFile.content ? (
+                            <pre className="whitespace-pre-wrap font-mono text-sm text-gray-800 dark:text-gray-200 bg-gray-50 dark:bg-gray-800 p-4 rounded-lg overflow-auto max-h-[50vh]">
+                              {selectedFile.content}
+                            </pre>
+                          ) : (
+                            <div className="text-center py-8">
+                              <p className="text-gray-600 dark:text-gray-400 mb-4">
+                                Excel files can be viewed by downloading and opening in a spreadsheet application
+                              </p>
+                              <div className="flex gap-3 justify-center">
+                                {selectedFile.blobUrl && (
+                                  <Button
+                                    className="bg-[#D4A84B] hover:bg-[#c49a3f] text-white"
+                                    onClick={() => {
+                                      if (selectedFile.blobUrl) {
+                                        const link = document.createElement('a')
+                                        link.href = selectedFile.blobUrl
+                                        link.download = selectedFile.name
+                                        document.body.appendChild(link)
+                                        link.click()
+                                        document.body.removeChild(link)
+                                      }
+                                    }}
+                                  >
+                                    <Download className="h-4 w-4 mr-2" />
+                                    Download Spreadsheet
+                                  </Button>
+                                )}
+                              </div>
+                            </div>
+                          )}
+                        </div>
                       </div>
                     ) : selectedFile.type.includes("word") || selectedFile.type.includes("doc") || selectedFile.name.endsWith(".docx") ? (
                       <div className="p-4 h-full">
@@ -1995,19 +2139,209 @@ export default function BusinessPage() {
                               )}
                             </div>
 
+                            {/* URL - Only show if has value or editing */}
+                            {(account.url || editingAccountId === account.id) && (
+                              <div>
+                                <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Login URL</label>
+                                {editingAccountId === account.id ? (
+                                  <Input
+                                    value={account.url || ""}
+                                    onChange={(e) => handleUpdateAccount(account.id, { url: e.target.value })}
+                                    className="mt-1"
+                                    placeholder="https://..."
+                                  />
+                                ) : (
+                                  <p className="text-sm text-gray-900 dark:text-white mt-1">{formatWithLinks(account.url || "")}</p>
+                                )}
+                              </div>
+                            )}
+
+                            {/* Username - Only show if has value or editing */}
+                            {(account.username || editingAccountId === account.id) && (
+                              <div>
+                                <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Username / Email</label>
+                                {editingAccountId === account.id ? (
+                                  <Input
+                                    value={account.username || ""}
+                                    onChange={(e) => handleUpdateAccount(account.id, { username: e.target.value })}
+                                    className="mt-1"
+                                  />
+                                ) : (
+                                  <p className="text-sm text-gray-900 dark:text-white mt-1">{account.username}</p>
+                                )}
+                              </div>
+                            )}
+
+                            {/* Password - Only show if has value or editing */}
+                            {(account.password || editingAccountId === account.id) && (
+                              <div>
+                                <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Password</label>
+                                {editingAccountId === account.id ? (
+                                  <Input
+                                    value={account.password || ""}
+                                    onChange={(e) => handleUpdateAccount(account.id, { password: e.target.value })}
+                                    className="mt-1"
+                                    type="password"
+                                  />
+                                ) : (
+                                  <p className="text-sm text-gray-900 dark:text-white mt-1 font-mono">••••••••</p>
+                                )}
+                              </div>
+                            )}
+
                             {/* Account Number */}
-                            <div>
-                              <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Account Number</label>
-                              {editingAccountId === account.id ? (
-                                <Input
-                                  value={account.accountNumber}
-                                  onChange={(e) => handleUpdateAccount(account.id, { accountNumber: e.target.value })}
-                                  className="mt-1"
-                                />
-                              ) : (
-                                <p className="text-sm text-gray-900 dark:text-white mt-1">{account.accountNumber || "N/A"}</p>
-                              )}
-                            </div>
+                            {(account.accountNumber || editingAccountId === account.id) && (
+                              <div>
+                                <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Account Number</label>
+                                {editingAccountId === account.id ? (
+                                  <Input
+                                    value={account.accountNumber}
+                                    onChange={(e) => handleUpdateAccount(account.id, { accountNumber: e.target.value })}
+                                    className="mt-1"
+                                  />
+                                ) : (
+                                  <p className="text-sm text-gray-900 dark:text-white mt-1">{account.accountNumber || "N/A"}</p>
+                                )}
+                              </div>
+                            )}
+
+                            {/* Entity ID - Only show if has value or editing */}
+                            {(account.entityId || editingAccountId === account.id) && (
+                              <div>
+                                <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Entity ID</label>
+                                {editingAccountId === account.id ? (
+                                  <Input
+                                    value={account.entityId || ""}
+                                    onChange={(e) => handleUpdateAccount(account.id, { entityId: e.target.value })}
+                                    className="mt-1"
+                                  />
+                                ) : (
+                                  <p className="text-sm text-gray-900 dark:text-white mt-1">{account.entityId}</p>
+                                )}
+                              </div>
+                            )}
+
+                            {/* Jurisdiction - Only show if has value or editing */}
+                            {(account.jurisdiction || editingAccountId === account.id) && (
+                              <div>
+                                <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Jurisdiction</label>
+                                {editingAccountId === account.id ? (
+                                  <Input
+                                    value={account.jurisdiction || ""}
+                                    onChange={(e) => handleUpdateAccount(account.id, { jurisdiction: e.target.value })}
+                                    className="mt-1"
+                                  />
+                                ) : (
+                                  <p className="text-sm text-gray-900 dark:text-white mt-1">{account.jurisdiction}</p>
+                                )}
+                              </div>
+                            )}
+
+                            {/* Agent Name - Only show if has value or editing */}
+                            {(account.agentName || editingAccountId === account.id) && (
+                              <div>
+                                <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Registered Agent</label>
+                                {editingAccountId === account.id ? (
+                                  <Input
+                                    value={account.agentName || ""}
+                                    onChange={(e) => handleUpdateAccount(account.id, { agentName: e.target.value })}
+                                    className="mt-1"
+                                  />
+                                ) : (
+                                  <p className="text-sm text-gray-900 dark:text-white mt-1">{account.agentName}</p>
+                                )}
+                              </div>
+                            )}
+
+                            {/* Address - Only show if has value or editing */}
+                            {(account.address || editingAccountId === account.id) && (
+                              <div className="md:col-span-2">
+                                <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Address</label>
+                                {editingAccountId === account.id ? (
+                                  <Input
+                                    value={account.address || ""}
+                                    onChange={(e) => handleUpdateAccount(account.id, { address: e.target.value })}
+                                    className="mt-1"
+                                  />
+                                ) : (
+                                  <p className="text-sm text-gray-900 dark:text-white mt-1">{account.address}</p>
+                                )}
+                              </div>
+                            )}
+
+                            {/* City/State/Zip - Only show if has value or editing */}
+                            {(account.city || account.state || account.zip || editingAccountId === account.id) && (
+                              <>
+                                <div>
+                                  <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">City</label>
+                                  {editingAccountId === account.id ? (
+                                    <Input
+                                      value={account.city || ""}
+                                      onChange={(e) => handleUpdateAccount(account.id, { city: e.target.value })}
+                                      className="mt-1"
+                                    />
+                                  ) : (
+                                    <p className="text-sm text-gray-900 dark:text-white mt-1">{account.city || "-"}</p>
+                                  )}
+                                </div>
+                                <div>
+                                  <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">State</label>
+                                  {editingAccountId === account.id ? (
+                                    <Input
+                                      value={account.state || ""}
+                                      onChange={(e) => handleUpdateAccount(account.id, { state: e.target.value })}
+                                      className="mt-1"
+                                    />
+                                  ) : (
+                                    <p className="text-sm text-gray-900 dark:text-white mt-1">{account.state || "-"}</p>
+                                  )}
+                                </div>
+                                <div>
+                                  <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">ZIP Code</label>
+                                  {editingAccountId === account.id ? (
+                                    <Input
+                                      value={account.zip || ""}
+                                      onChange={(e) => handleUpdateAccount(account.id, { zip: e.target.value })}
+                                      className="mt-1"
+                                    />
+                                  ) : (
+                                    <p className="text-sm text-gray-900 dark:text-white mt-1">{account.zip || "-"}</p>
+                                  )}
+                                </div>
+                              </>
+                            )}
+
+                            {/* Phone - Only show if has value or editing */}
+                            {(account.phone || editingAccountId === account.id) && (
+                              <div>
+                                <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Phone</label>
+                                {editingAccountId === account.id ? (
+                                  <Input
+                                    value={account.phone || ""}
+                                    onChange={(e) => handleUpdateAccount(account.id, { phone: e.target.value })}
+                                    className="mt-1"
+                                  />
+                                ) : (
+                                  <p className="text-sm text-gray-900 dark:text-white mt-1">{account.phone}</p>
+                                )}
+                              </div>
+                            )}
+
+                            {/* Email - Only show if has value or editing */}
+                            {(account.email || editingAccountId === account.id) && (
+                              <div>
+                                <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Email</label>
+                                {editingAccountId === account.id ? (
+                                  <Input
+                                    value={account.email || ""}
+                                    onChange={(e) => handleUpdateAccount(account.id, { email: e.target.value })}
+                                    className="mt-1"
+                                  />
+                                ) : (
+                                  <p className="text-sm text-gray-900 dark:text-white mt-1">{account.email}</p>
+                                )}
+                              </div>
+                            )}
 
                             {/* Category */}
                             <div>
@@ -2025,8 +2359,16 @@ export default function BusinessPage() {
                                   <option value="Loan">Loan</option>
                                   <option value="Money Market">Money Market</option>
                                   <option value="Net-30">Net-30</option>
-                                  <option value="Email">Email</option>
+                                  <option value="Net-60">Net-60</option>
+                                  <option value="Tradeline">Tradeline</option>
+                                  <option value="Email">Email Hosting</option>
                                   <option value="Domain">Domain</option>
+                                  <option value="Hosting">Web Hosting</option>
+                                  <option value="WordPress">WordPress</option>
+                                  <option value="Mailbox">Virtual Mailbox</option>
+                                  <option value="Registered Agent">Registered Agent</option>
+                                  <option value="SOS">Secretary of State</option>
+                                  <option value="EIN">EIN / Tax ID</option>
                                   <option value="Insurance">Insurance</option>
                                   <option value="Other">Other</option>
                                 </select>
@@ -2052,23 +2394,42 @@ export default function BusinessPage() {
                               )}
                             </div>
 
-                            {/* Balance */}
-                            <div>
-                              <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Balance / Limit</label>
-                              {editingAccountId === account.id ? (
-                                <Input
-                                  type="number"
-                                  value={account.balance}
-                                  onChange={(e) => handleUpdateAccount(account.id, { balance: parseFloat(e.target.value) || 0 })}
-                                  className="mt-1"
-                                />
-                              ) : (
-                                <p className={`text-sm mt-1 ${account.balance < 0 ? "text-red-600" : "text-gray-900 dark:text-white"}`}>
-                                  ${Math.abs(account.balance).toLocaleString("en-US", { minimumFractionDigits: 2 })}
-                                  {account.balance < 0 && " (Credit)"}
-                                </p>
-                              )}
-                            </div>
+                            {/* Balance - Only show if relevant category */}
+                            {["Checking", "Savings", "Credit Card", "Line of Credit", "Loan", "Money Market"].includes(account.category) && (
+                              <div>
+                                <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Balance / Limit</label>
+                                {editingAccountId === account.id ? (
+                                  <Input
+                                    type="number"
+                                    value={account.balance}
+                                    onChange={(e) => handleUpdateAccount(account.id, { balance: parseFloat(e.target.value) || 0 })}
+                                    className="mt-1"
+                                  />
+                                ) : (
+                                  <p className={`text-sm mt-1 ${account.balance < 0 ? "text-red-600" : "text-gray-900 dark:text-white"}`}>
+                                    ${Math.abs(account.balance).toLocaleString("en-US", { minimumFractionDigits: 2 })}
+                                    {account.balance < 0 && " (Credit)"}
+                                  </p>
+                                )}
+                              </div>
+                            )}
+
+                            {/* Notes - Only show if has value or editing */}
+                            {(account.notes || editingAccountId === account.id) && (
+                              <div className="md:col-span-2 lg:col-span-3">
+                                <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Notes</label>
+                                {editingAccountId === account.id ? (
+                                  <textarea
+                                    value={account.notes || ""}
+                                    onChange={(e) => handleUpdateAccount(account.id, { notes: e.target.value })}
+                                    className="mt-1 w-full min-h-[80px] rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 px-3 py-2 text-sm text-gray-900 dark:text-gray-50"
+                                    placeholder="Additional notes..."
+                                  />
+                                ) : (
+                                  <p className="text-sm text-gray-900 dark:text-white mt-1 whitespace-pre-wrap">{account.notes}</p>
+                                )}
+                              </div>
+                            )}
                           </div>
 
                           {/* Edit Mode Actions */}
@@ -2094,5 +2455,21 @@ export default function BusinessPage() {
         </>
       )}
     </div>
+  )
+}
+
+// Wrapper with Suspense for useSearchParams
+export default function BusinessPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <div className="w-12 h-12 border-4 border-amber-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+          <p className="text-gray-600 dark:text-gray-400">Loading...</p>
+        </div>
+      </div>
+    }>
+      <BusinessPageContent />
+    </Suspense>
   )
 }

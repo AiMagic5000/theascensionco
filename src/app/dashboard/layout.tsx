@@ -51,7 +51,15 @@ const sidebarLinks: SidebarLink[] = [
       { href: "/dashboard/privacy/register-irs", label: "Register with IRS", icon: FileCheck },
     ]
   },
-  { href: "/dashboard/business", label: "Business Management", icon: Building2 },
+  {
+    href: "/dashboard/business",
+    label: "Business Management",
+    icon: Building2,
+    subLinks: [
+      { href: "/dashboard/business?tab=profile", label: "Profile & Accounts", icon: Users },
+      { href: "/dashboard/business?tab=documents", label: "Documents", icon: FileCheck },
+    ]
+  },
   { href: "/dashboard/resources", label: "Resources", icon: BookOpen },
   { href: "/dashboard/support", label: "Help & Support", icon: HelpCircle },
 ]
