@@ -1,7 +1,9 @@
 "use client"
 
-import { useState, useCallback, useRef } from "react"
+import { useState, useCallback, useRef, useEffect } from "react"
 import { motion, AnimatePresence } from "framer-motion"
+import { useUser } from "@clerk/nextjs"
+import { supabase } from "@/lib/supabase"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -49,6 +51,7 @@ interface FileItem {
   folderId: string | null
   url?: string
   blobUrl?: string // Object URL for download/preview
+  content?: string // Text content for preview
   status: "uploading" | "processing" | "ready" | "error"
   aiProcessed?: boolean
 }
@@ -110,12 +113,15 @@ function formatFileSize(bytes: number): string {
 }
 
 export default function BusinessPage() {
+  const { user, isLoaded } = useUser()
   const [activeTab, setActiveTab] = useState<"profile" | "documents">("profile")
   const [businessProfile, setBusinessProfile] = useState(initialBusinessProfile)
   const [accounts, setAccounts] = useState(initialAccounts)
   const [editingProfile, setEditingProfile] = useState(false)
   const [showAddAccount, setShowAddAccount] = useState(false)
   const [accountFilter, setAccountFilter] = useState<"all" | "business" | "personal">("all")
+  const [isLoading, setIsLoading] = useState(true)
+  const [isSaving, setIsSaving] = useState(false)
 
   // Document management state
   const [files, setFiles] = useState<FileItem[]>(initialFiles)
@@ -143,6 +149,216 @@ export default function BusinessPage() {
     institution: "",
     accountNumber: "",
   })
+
+  // Load data from Cognabase on mount
+  useEffect(() => {
+    if (!isLoaded || !user) return
+
+    const loadData = async () => {
+      setIsLoading(true)
+      const userId = user.id
+
+      try {
+        // Load business profile
+        const { data: profileData } = await supabase
+          .from('business_profiles')
+          .select('*')
+          .eq('user_id', userId)
+          .single()
+
+        if (profileData) {
+          setBusinessProfile({
+            companyName: profileData.company_name || '',
+            dunsNumber: profileData.duns_number || '',
+            paydexScore: profileData.paydex_score || 0,
+            ein: profileData.ein || '',
+            stateOfFormation: profileData.state_of_formation || '',
+            industry: profileData.industry || '',
+          })
+        }
+
+        // Load accounts
+        const { data: accountsData } = await supabase
+          .from('business_accounts')
+          .select('*')
+          .eq('user_id', userId)
+
+        if (accountsData && accountsData.length > 0) {
+          setAccounts(accountsData.map(a => ({
+            id: a.id,
+            name: a.name,
+            type: a.type as 'business' | 'personal',
+            category: a.category || 'Checking',
+            balance: Number(a.balance) || 0,
+            institution: a.institution || '',
+            accountNumber: a.account_number || '',
+          })))
+        }
+
+        // Load folders
+        const { data: foldersData } = await supabase
+          .from('folders')
+          .select('*')
+          .eq('user_id', userId)
+
+        if (foldersData && foldersData.length > 0) {
+          const loadedFolders: FolderItem[] = foldersData.map(f => ({
+            id: f.id,
+            name: f.name,
+            parentId: f.parent_id,
+            createdAt: new Date(f.created_at),
+          }))
+          // Merge with initial folders
+          const existingNames = loadedFolders.map(f => f.name.toLowerCase())
+          const newInitialFolders = initialFolders.filter(f => !existingNames.includes(f.name.toLowerCase()))
+          setFolders([...loadedFolders, ...newInitialFolders])
+        }
+
+        // Load files
+        const { data: filesData } = await supabase
+          .from('files')
+          .select('*')
+          .eq('user_id', userId)
+
+        if (filesData && filesData.length > 0) {
+          setFiles(filesData.map(f => ({
+            id: f.id,
+            name: f.name,
+            type: f.type || 'application/octet-stream',
+            size: Number(f.size) || 0,
+            uploadedAt: new Date(f.created_at),
+            folderId: f.folder_id,
+            content: f.content || undefined,
+            status: 'ready' as const,
+            aiProcessed: f.ai_processed || false,
+          })))
+        }
+      } catch (error) {
+        console.error('Error loading data from Cognabase:', error)
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    loadData()
+  }, [isLoaded, user])
+
+  // Save business profile to Cognabase
+  const saveBusinessProfile = useCallback(async (profile: typeof businessProfile) => {
+    if (!user) return
+    setIsSaving(true)
+
+    try {
+      await supabase
+        .from('business_profiles')
+        .upsert({
+          user_id: user.id,
+          company_name: profile.companyName,
+          duns_number: profile.dunsNumber,
+          paydex_score: profile.paydexScore,
+          ein: profile.ein,
+          state_of_formation: profile.stateOfFormation,
+          industry: profile.industry,
+          updated_at: new Date().toISOString(),
+        }, { onConflict: 'user_id' })
+    } catch (error) {
+      console.error('Error saving profile:', error)
+    } finally {
+      setIsSaving(false)
+    }
+  }, [user])
+
+  // Save account to Cognabase
+  const saveAccount = useCallback(async (account: Account) => {
+    if (!user) return
+
+    try {
+      await supabase
+        .from('business_accounts')
+        .upsert({
+          id: account.id,
+          user_id: user.id,
+          name: account.name,
+          type: account.type,
+          category: account.category,
+          balance: account.balance,
+          institution: account.institution,
+          account_number: account.accountNumber,
+        })
+    } catch (error) {
+      console.error('Error saving account:', error)
+    }
+  }, [user])
+
+  // Delete account from Cognabase
+  const deleteAccount = useCallback(async (accountId: string) => {
+    if (!user) return
+
+    try {
+      await supabase
+        .from('business_accounts')
+        .delete()
+        .eq('id', accountId)
+        .eq('user_id', user.id)
+    } catch (error) {
+      console.error('Error deleting account:', error)
+    }
+  }, [user])
+
+  // Save folder to Cognabase
+  const saveFolder = useCallback(async (folder: FolderItem) => {
+    if (!user) return
+
+    try {
+      await supabase
+        .from('folders')
+        .upsert({
+          id: folder.id,
+          user_id: user.id,
+          name: folder.name,
+          parent_id: folder.parentId,
+        })
+    } catch (error) {
+      console.error('Error saving folder:', error)
+    }
+  }, [user])
+
+  // Save file metadata to Cognabase
+  const saveFile = useCallback(async (file: FileItem) => {
+    if (!user) return
+
+    try {
+      await supabase
+        .from('files')
+        .upsert({
+          id: file.id,
+          user_id: user.id,
+          name: file.name,
+          type: file.type,
+          size: file.size,
+          folder_id: file.folderId,
+          content: file.content?.substring(0, 50000), // Limit content size
+          ai_processed: file.aiProcessed || false,
+        })
+    } catch (error) {
+      console.error('Error saving file:', error)
+    }
+  }, [user])
+
+  // Delete file from Cognabase
+  const deleteFileFromDb = useCallback(async (fileId: string) => {
+    if (!user) return
+
+    try {
+      await supabase
+        .from('files')
+        .delete()
+        .eq('id', fileId)
+        .eq('user_id', user.id)
+    } catch (error) {
+      console.error('Error deleting file:', error)
+    }
+  }, [user])
 
   // Filter files based on current folder and search
   const filteredFiles = files.filter((file) => {
@@ -173,18 +389,37 @@ export default function BusinessPage() {
   }, [currentFolder])
 
   const handleFileUpload = (uploadedFiles: File[]) => {
-    uploadedFiles.forEach((file) => {
+    uploadedFiles.forEach(async (file) => {
       // Create a blob URL for download/preview
       const blobUrl = URL.createObjectURL(file)
+      const fileId = Date.now().toString() + Math.random()
+
+      // Read text content for text-based files
+      let content: string | undefined
+      const isTextFile =
+        file.type.includes("text") ||
+        file.name.endsWith(".txt") ||
+        file.name.endsWith(".csv") ||
+        file.name.endsWith(".md") ||
+        file.name.endsWith(".json")
+
+      if (isTextFile) {
+        try {
+          content = await file.text()
+        } catch {
+          content = undefined
+        }
+      }
 
       const newFile: FileItem = {
-        id: Date.now().toString() + Math.random(),
+        id: fileId,
         name: file.name,
-        type: file.type,
+        type: file.type || getMimeType(file.name),
         size: file.size,
         uploadedAt: new Date(),
         folderId: currentFolder,
         blobUrl: blobUrl,
+        content: content,
         status: "uploading",
       }
 
@@ -198,9 +433,12 @@ export default function BusinessPage() {
         if (progress >= 100) {
           progress = 100
           clearInterval(interval)
+          const readyFile = { ...newFile, status: "ready" as const }
           setFiles((prev) =>
-            prev.map((f) => (f.id === newFile.id ? { ...f, status: "ready" } : f))
+            prev.map((f) => (f.id === newFile.id ? readyFile : f))
           )
+          // Save file metadata to Cognabase
+          saveFile(readyFile)
           setUploadProgress((prev) => {
             const newProgress = { ...prev }
             delete newProgress[newFile.id]
@@ -211,6 +449,25 @@ export default function BusinessPage() {
         }
       }, 200)
     })
+  }
+
+  // Helper to get MIME type from file extension
+  const getMimeType = (filename: string): string => {
+    const ext = filename.split('.').pop()?.toLowerCase()
+    const mimeTypes: Record<string, string> = {
+      pdf: 'application/pdf',
+      doc: 'application/msword',
+      docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      txt: 'text/plain',
+      csv: 'text/csv',
+      xls: 'application/vnd.ms-excel',
+      xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      png: 'image/png',
+      jpg: 'image/jpeg',
+      jpeg: 'image/jpeg',
+      gif: 'image/gif',
+    }
+    return mimeTypes[ext || ''] || 'application/octet-stream'
   }
 
   const handleFolderUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -274,15 +531,16 @@ export default function BusinessPage() {
             const data = result.data
 
             // Auto-populate business profile
-            setBusinessProfile((prev) => ({
-              ...prev,
-              companyName: data.companyName || prev.companyName,
-              ein: data.ein || prev.ein,
-              dunsNumber: data.dunsNumber || prev.dunsNumber,
-              stateOfFormation: data.stateOfFormation || prev.stateOfFormation,
-              industry: data.industry || prev.industry,
-              paydexScore: data.paydexScore || prev.paydexScore,
-            }))
+            const updatedProfile = {
+              companyName: data.companyName || businessProfile.companyName,
+              ein: data.ein || businessProfile.ein,
+              dunsNumber: data.dunsNumber || businessProfile.dunsNumber,
+              stateOfFormation: data.stateOfFormation || businessProfile.stateOfFormation,
+              industry: data.industry || businessProfile.industry,
+              paydexScore: data.paydexScore || businessProfile.paydexScore,
+            }
+            setBusinessProfile(updatedProfile)
+            await saveBusinessProfile(updatedProfile)
 
             // Auto-add accounts if found
             if (data.accounts && data.accounts.length > 0) {
@@ -291,6 +549,10 @@ export default function BusinessPage() {
                 id: Date.now().toString() + index,
               }))
               setAccounts((prev) => [...prev, ...newAccounts])
+              // Save each account to Cognabase
+              for (const acc of newAccounts) {
+                await saveAccount(acc)
+              }
             }
 
             // Create suggested folders
@@ -298,7 +560,7 @@ export default function BusinessPage() {
               const existingFolderNames = folders.map((f) => f.name.toLowerCase())
               const newFolderNames = new Set<string>()
 
-              data.suggestedFolders.forEach((sf: { suggestedFolder: string }) => {
+              for (const sf of data.suggestedFolders as { suggestedFolder: string }[]) {
                 const folderName = sf.suggestedFolder
                 if (
                   folderName &&
@@ -306,26 +568,28 @@ export default function BusinessPage() {
                   !newFolderNames.has(folderName.toLowerCase())
                 ) {
                   newFolderNames.add(folderName.toLowerCase())
-                  setFolders((prev) => [
-                    ...prev,
-                    {
-                      id: Date.now().toString() + Math.random(),
-                      name: folderName,
-                      parentId: null,
-                      createdAt: new Date(),
-                    },
-                  ])
+                  const newFolder: FolderItem = {
+                    id: Date.now().toString() + Math.random(),
+                    name: folderName,
+                    parentId: null,
+                    createdAt: new Date(),
+                  }
+                  setFolders((prev) => [...prev, newFolder])
+                  await saveFolder(newFolder)
                 }
-              })
+              }
             }
 
-            // Mark files as AI processed
-            setFiles((prev) =>
-              prev.map((f) => ({
+            // Mark files as AI processed and save to Cognabase
+            setFiles((prev) => {
+              const updatedFiles = prev.map((f) => ({
                 ...f,
                 aiProcessed: true,
               }))
-            )
+              // Save each file to Cognabase
+              updatedFiles.forEach((file) => saveFile(file))
+              return updatedFiles
+            })
           }
         }
       } catch (error) {
@@ -344,11 +608,12 @@ export default function BusinessPage() {
     setPendingFiles([])
   }
 
-  const handleDeleteFile = (fileId: string) => {
+  const handleDeleteFile = async (fileId: string) => {
     setFiles((prev) => prev.filter((f) => f.id !== fileId))
+    await deleteFileFromDb(fileId)
   }
 
-  const handleCreateFolder = () => {
+  const handleCreateFolder = async () => {
     if (newFolderName.trim()) {
       const newFolder: FolderItem = {
         id: Date.now().toString(),
@@ -357,15 +622,25 @@ export default function BusinessPage() {
         createdAt: new Date(),
       }
       setFolders((prev) => [...prev, newFolder])
+      await saveFolder(newFolder)
       setNewFolderName("")
       setShowNewFolderModal(false)
     }
   }
 
-  const handleDeleteFolder = (folderId: string) => {
+  const handleDeleteFolder = async (folderId: string) => {
     // Delete folder and all files in it
+    const filesToDelete = files.filter((f) => f.folderId === folderId)
     setFolders((prev) => prev.filter((f) => f.id !== folderId))
     setFiles((prev) => prev.filter((f) => f.folderId !== folderId))
+
+    // Delete from database
+    for (const file of filesToDelete) {
+      await deleteFileFromDb(file.id)
+    }
+    if (user) {
+      await supabase.from('folders').delete().eq('id', folderId).eq('user_id', user.id)
+    }
   }
 
   const handlePreviewFile = (file: FileItem) => {
@@ -382,12 +657,13 @@ export default function BusinessPage() {
     .filter((a) => a.type === "business")
     .reduce((sum, a) => sum + a.balance, 0)
 
-  const handleAddAccount = () => {
+  const handleAddAccount = async () => {
     const account: Account = {
       id: Date.now().toString(),
       ...newAccount,
     }
     setAccounts([...accounts, account])
+    await saveAccount(account)
     setNewAccount({
       name: "",
       type: "business",
@@ -399,8 +675,21 @@ export default function BusinessPage() {
     setShowAddAccount(false)
   }
 
-  const handleDeleteAccount = (id: string) => {
+  const handleDeleteAccount = async (id: string) => {
     setAccounts(accounts.filter((a) => a.id !== id))
+    await deleteAccount(id)
+  }
+
+  // Show loading state while fetching data
+  if (isLoading || !isLoaded) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <div className="w-12 h-12 border-4 border-amber-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+          <p className="text-gray-600 dark:text-gray-400">Loading your business data...</p>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -697,8 +986,8 @@ export default function BusinessPage() {
                                     <Eye className="h-4 w-4" />
                                   </Button>
                                   <Button
-                                    variant="ghost"
                                     size="icon"
+                                    className="bg-[#D4A84B] hover:bg-[#c49a3f] text-white h-8 w-8"
                                     onClick={(e) => {
                                       e.stopPropagation()
                                       if (file.blobUrl) {
@@ -796,8 +1085,8 @@ export default function BusinessPage() {
                     </div>
                     <div className="flex items-center gap-2">
                       <Button
-                        variant="outline"
                         size="sm"
+                        className="bg-[#D4A84B] hover:bg-[#c49a3f] text-white font-medium"
                         onClick={() => {
                           if (selectedFile.blobUrl) {
                             const link = document.createElement('a')
@@ -818,36 +1107,103 @@ export default function BusinessPage() {
                       </Button>
                     </div>
                   </div>
-                  <div className="p-4 h-[70vh] overflow-auto bg-gray-100 dark:bg-gray-800">
-                    {selectedFile.type.includes("pdf") ? (
-                      <div className="flex flex-col items-center justify-center h-full text-gray-500">
-                        <FileText className="h-24 w-24 mb-4 text-red-400" />
-                        <p className="text-lg font-medium mb-2">PDF Preview</p>
-                        <p className="text-sm text-gray-400 mb-4">
-                          {selectedFile.name}
-                        </p>
-                        <p className="text-sm text-gray-400">
-                          Full PDF viewer would be integrated here using a library like react-pdf
-                        </p>
+                  <div className="h-[70vh] overflow-auto bg-gray-100 dark:bg-gray-800">
+                    {selectedFile.type.includes("pdf") && selectedFile.blobUrl ? (
+                      <iframe
+                        src={selectedFile.blobUrl}
+                        className="w-full h-full border-0"
+                        title={selectedFile.name}
+                      />
+                    ) : selectedFile.type.includes("text") ||
+                       selectedFile.name.endsWith(".txt") ||
+                       selectedFile.name.endsWith(".csv") ||
+                       selectedFile.name.endsWith(".md") ||
+                       selectedFile.name.endsWith(".json") ? (
+                      <div className="p-4 h-full">
+                        {selectedFile.content ? (
+                          <pre className="whitespace-pre-wrap font-mono text-sm text-gray-800 dark:text-gray-200 bg-white dark:bg-gray-900 p-4 rounded-lg h-full overflow-auto">
+                            {selectedFile.content}
+                          </pre>
+                        ) : (
+                          <div className="flex flex-col items-center justify-center h-full text-gray-500">
+                            <FileText className="h-24 w-24 mb-4 text-gray-400" />
+                            <p className="text-lg font-medium mb-2">Text Preview</p>
+                            <p className="text-sm text-gray-400">Loading content...</p>
+                          </div>
+                        )}
                       </div>
-                    ) : selectedFile.type.includes("word") || selectedFile.type.includes("doc") ? (
-                      <div className="flex flex-col items-center justify-center h-full text-gray-500">
-                        <FileText className="h-24 w-24 mb-4 text-blue-400" />
-                        <p className="text-lg font-medium mb-2">Word Document Preview</p>
-                        <p className="text-sm text-gray-400 mb-4">
-                          {selectedFile.name}
-                        </p>
-                        <p className="text-sm text-gray-400">
-                          Word documents can be previewed using Microsoft Office Online or converted to PDF
-                        </p>
+                    ) : selectedFile.type.includes("word") || selectedFile.type.includes("doc") || selectedFile.name.endsWith(".docx") ? (
+                      <div className="p-4 h-full">
+                        <div className="bg-white dark:bg-gray-900 rounded-lg p-6 h-full overflow-auto">
+                          <div className="flex items-center gap-3 mb-4 pb-4 border-b border-gray-200 dark:border-gray-700">
+                            <FileText className="h-8 w-8 text-blue-500" />
+                            <div>
+                              <h4 className="font-semibold text-gray-900 dark:text-white">{selectedFile.name}</h4>
+                              <p className="text-sm text-gray-500">Word Document • {formatFileSize(selectedFile.size)}</p>
+                            </div>
+                          </div>
+                          {selectedFile.blobUrl ? (
+                            <div className="text-center py-8">
+                              <p className="text-gray-600 dark:text-gray-400 mb-4">
+                                Word documents can be viewed using Microsoft Office Online
+                              </p>
+                              <div className="flex gap-3 justify-center">
+                                <Button
+                                  className="bg-[#D4A84B] hover:bg-[#c49a3f] text-white"
+                                  onClick={() => {
+                                    if (selectedFile.blobUrl) {
+                                      const link = document.createElement('a')
+                                      link.href = selectedFile.blobUrl
+                                      link.download = selectedFile.name
+                                      document.body.appendChild(link)
+                                      link.click()
+                                      document.body.removeChild(link)
+                                    }
+                                  }}
+                                >
+                                  <Download className="h-4 w-4 mr-2" />
+                                  Download to View
+                                </Button>
+                              </div>
+                            </div>
+                          ) : (
+                            <p className="text-gray-500 text-center py-8">Document preview not available</p>
+                          )}
+                        </div>
+                      </div>
+                    ) : selectedFile.type.includes("image") && selectedFile.blobUrl ? (
+                      <div className="p-4 flex items-center justify-center h-full">
+                        <img
+                          src={selectedFile.blobUrl}
+                          alt={selectedFile.name}
+                          className="max-w-full max-h-full object-contain rounded-lg shadow-lg"
+                        />
                       </div>
                     ) : (
-                      <div className="flex flex-col items-center justify-center h-full text-gray-500">
+                      <div className="flex flex-col items-center justify-center h-full text-gray-500 p-4">
                         <File className="h-24 w-24 mb-4 text-gray-400" />
-                        <p className="text-lg font-medium mb-2">File Preview</p>
-                        <p className="text-sm text-gray-400">
-                          Preview not available for this file type
+                        <p className="text-lg font-medium mb-2">{selectedFile.name}</p>
+                        <p className="text-sm text-gray-400 mb-4">
+                          {formatFileSize(selectedFile.size)} • {selectedFile.type || 'Unknown type'}
                         </p>
+                        {selectedFile.blobUrl && (
+                          <Button
+                            className="bg-[#D4A84B] hover:bg-[#c49a3f] text-white"
+                            onClick={() => {
+                              if (selectedFile.blobUrl) {
+                                const link = document.createElement('a')
+                                link.href = selectedFile.blobUrl
+                                link.download = selectedFile.name
+                                document.body.appendChild(link)
+                                link.click()
+                                document.body.removeChild(link)
+                              }
+                            }}
+                          >
+                            <Download className="h-4 w-4 mr-2" />
+                            Download File
+                          </Button>
+                        )}
                       </div>
                     )}
                   </div>
@@ -1122,9 +1478,19 @@ export default function BusinessPage() {
               </div>
               {editingProfile && (
                 <div className="mt-6 flex justify-end">
-                  <Button onClick={() => setEditingProfile(false)}>
-                    <Save className="mr-2 h-4 w-4" />
-                    Save Changes
+                  <Button
+                    onClick={async () => {
+                      await saveBusinessProfile(businessProfile)
+                      setEditingProfile(false)
+                    }}
+                    disabled={isSaving}
+                  >
+                    {isSaving ? (
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
+                    ) : (
+                      <Save className="mr-2 h-4 w-4" />
+                    )}
+                    {isSaving ? 'Saving...' : 'Save Changes'}
                   </Button>
                 </div>
               )}

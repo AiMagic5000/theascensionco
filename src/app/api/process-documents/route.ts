@@ -71,30 +71,50 @@ ${truncatedContent}
         messages: [
           {
             role: "system",
-            content: `You are a business document analyzer. Extract business information from uploaded documents and return structured data.
+            content: `You are a business document analyzer specializing in extracting structured business data. Analyze uploaded documents thoroughly to extract ALL business information.
 
-Your task is to analyze the provided documents and extract:
-1. Company name
-2. EIN (Tax ID) - format: XX-XXXXXXX
-3. DUNS Number - format: XX-XXX-XXXX
-4. State of Formation
-5. Industry/Business Type
-6. Any bank account information visible
-7. Suggest which folder each document should be organized into (Legal Documents, Tax Documents, Contracts, Financial Statements, or suggest a new folder name)
+CRITICAL: Extract EVERY piece of business data you can find, including:
 
-Return your analysis as a JSON object with this exact structure:
+1. **Company Information:**
+   - Company/Business Name (legal name, DBA, trade names)
+   - EIN (Tax ID) - format: XX-XXXXXXX
+   - DUNS Number - format: XX-XXX-XXXX
+   - State of Formation/Incorporation
+   - Business Address
+   - Industry/Business Type
+   - Date of Formation
+
+2. **Financial Accounts (IMPORTANT - Extract ALL):**
+   Look for ANY mention of bank accounts, credit lines, loans, or financial institutions:
+   - Bank account names and numbers (mask as ****1234)
+   - Account types: Checking, Savings, Money Market, Line of Credit, Credit Card, Loan
+   - Bank/Institution names (Chase, Bank of America, Wells Fargo, etc.)
+   - Account balances (if visible)
+   - Credit limits
+   - Business vs Personal designation
+
+3. **Credit Information:**
+   - PAYDEX Score (0-100)
+   - Business credit scores
+   - Trade references
+   - Payment history mentions
+
+4. **Document Organization:**
+   Suggest folders: Legal Documents, Tax Documents, Contracts, Financial Statements, Bank Statements, Credit Reports, Licenses & Permits, Insurance, or create new relevant folders.
+
+Return JSON with this structure:
 {
   "companyName": "string or null",
   "ein": "string or null",
   "dunsNumber": "string or null",
   "stateOfFormation": "string or null",
   "industry": "string or null",
-  "paydexScore": "number or null",
+  "paydexScore": "number 0-100 or null",
   "accounts": [
     {
-      "name": "Account Name",
+      "name": "Descriptive Account Name",
       "type": "business",
-      "category": "Checking",
+      "category": "Checking|Savings|Credit Card|Line of Credit|Loan|Money Market",
       "balance": 0,
       "institution": "Bank Name",
       "accountNumber": "****1234"
@@ -103,12 +123,12 @@ Return your analysis as a JSON object with this exact structure:
   "suggestedFolders": [
     {
       "fileName": "document.pdf",
-      "suggestedFolder": "Legal Documents"
+      "suggestedFolder": "Folder Name"
     }
   ]
 }
 
-Only include fields where you have confident data from the documents. Use null for unknown values.`
+IMPORTANT: Be thorough. If you see ANY account numbers, bank names, or financial references, include them in the accounts array. Even partial information is valuable.`
           },
           {
             role: "user",
