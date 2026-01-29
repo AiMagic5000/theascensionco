@@ -314,14 +314,25 @@ export default function PrivacyPage() {
       }
 
       // For PDFs, read as base64 for AI processing
-      let base64Content: string | undefined
       if (file.type.includes("pdf")) {
         try {
           const arrayBuffer = await file.arrayBuffer()
-          base64Content = Buffer.from(arrayBuffer).toString("base64")
-          content = `[PDF Content - Base64 encoded for AI processing]`
+          // Convert to base64 and prefix with data URI for AI processing
+          const base64 = Buffer.from(arrayBuffer).toString("base64")
+          content = `data:application/pdf;base64,${base64}`
         } catch {
-          base64Content = undefined
+          content = undefined
+        }
+      }
+
+      // For images, also read as base64
+      if (file.type.includes("image")) {
+        try {
+          const arrayBuffer = await file.arrayBuffer()
+          const base64 = Buffer.from(arrayBuffer).toString("base64")
+          content = `data:${file.type};base64,${base64}`
+        } catch {
+          content = undefined
         }
       }
 
@@ -334,7 +345,7 @@ export default function PrivacyPage() {
         size: file.size,
         uploadedAt: new Date(),
         blobUrl,
-        content: content || base64Content,
+        content,
       }
 
       if (type === "privacy") {

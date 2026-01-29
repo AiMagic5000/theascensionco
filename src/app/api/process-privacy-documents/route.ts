@@ -42,6 +42,67 @@ interface ExtractedPrivacyInfo {
   notes?: string
 }
 
+// Upload file to Kimi and get file ID
+async function uploadFileToKimi(base64Content: string, fileName: string, apiKey: string): Promise<string | null> {
+  try {
+    // Extract the actual base64 data from data URI
+    const base64Data = base64Content.includes(",")
+      ? base64Content.split(",")[1]
+      : base64Content
+
+    // Convert base64 to buffer
+    const buffer = Buffer.from(base64Data, "base64")
+
+    // Create FormData with the file
+    const formData = new FormData()
+    const blob = new Blob([buffer], { type: "application/pdf" })
+    formData.append("file", blob, fileName)
+    formData.append("purpose", "file-extract")
+
+    const response = await fetch("https://api.moonshot.ai/v1/files", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: formData,
+    })
+
+    if (!response.ok) {
+      const errorText = await response.text()
+      console.error("Kimi file upload error:", errorText)
+      return null
+    }
+
+    const data = await response.json()
+    return data.id
+  } catch (error) {
+    console.error("Error uploading file to Kimi:", error)
+    return null
+  }
+}
+
+// Get file content from Kimi
+async function getFileContent(fileId: string, apiKey: string): Promise<string | null> {
+  try {
+    const response = await fetch(`https://api.moonshot.ai/v1/files/${fileId}/content`, {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+      },
+    })
+
+    if (!response.ok) {
+      console.error("Kimi file content error:", response.status)
+      return null
+    }
+
+    return await response.text()
+  } catch (error) {
+    console.error("Error getting file content:", error)
+    return null
+  }
+}
+
 export async function POST(request: NextRequest) {
   try {
     const { documents, type }: { documents: DocumentData[]; type: "privacy" | "publicRecords" } = await request.json()
@@ -63,32 +124,45 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Filter documents with content
-    const validDocs = documents.filter(
-      (doc) => doc.content && doc.content.trim().length > 10
-    )
+    // Process documents - extract text from PDFs via Kimi file API
+    const processedContents: string[] = []
 
-    if (validDocs.length === 0) {
+    for (const doc of documents) {
+      if (!doc.content || doc.content.trim().length < 10) continue
+
+      // Check if it's a base64-encoded PDF or image
+      if (doc.content.startsWith("data:application/pdf;base64,")) {
+        console.log(`Uploading PDF: ${doc.fileName}`)
+        const fileId = await uploadFileToKimi(doc.content, doc.fileName, apiKey)
+        if (fileId) {
+          const fileContent = await getFileContent(fileId, apiKey)
+          if (fileContent) {
+            processedContents.push(`=== Document: ${doc.fileName} ===\n${fileContent}\n=== END ===`)
+          }
+        }
+      } else if (doc.content.startsWith("data:image/")) {
+        // For images, we'll use the vision model
+        processedContents.push(`=== Image Document: ${doc.fileName} ===\n[Image content - will be processed separately]\n=== END ===`)
+      } else {
+        // Plain text content
+        const truncatedContent = doc.content.substring(0, 15000)
+        processedContents.push(`=== Document: ${doc.fileName} ===\n${truncatedContent}\n=== END ===`)
+      }
+    }
+
+    if (processedContents.length === 0) {
       return NextResponse.json({
         success: true,
         data: {},
         documentsProcessed: 0,
-        message: "No readable text content found in documents.",
+        message: "No readable content found in documents. Please upload text files (.txt, .csv, .doc) or PDF files.",
       })
     }
 
-    // Prepare document summaries for AI processing
-    const documentSummaries = validDocs
-      .map((doc, index) => {
-        const truncatedContent = doc.content.substring(0, 8000)
-        return `=== Document ${index + 1}: ${doc.fileName} ===
-${truncatedContent}
-=== END Document ${index + 1} ===`
-      })
-      .join("\n\n")
+    const documentSummaries = processedContents.join("\n\n")
 
     const systemPrompt = type === "privacy"
-      ? `You are an expert privacy document analyzer. Extract ALL personal and privacy-related information from documents.
+      ? `You are an expert privacy document analyzer. Extract ALL personal and privacy-related information from the provided documents.
 
 ## Information to Extract:
 - Full Name (first and last name combined)
@@ -131,7 +205,7 @@ ${truncatedContent}
 }
 
 Return VALID JSON only - no markdown, no explanation text.`
-      : `You are an expert public records document analyzer. Extract ALL public records information from documents.
+      : `You are an expert public records document analyzer. Extract ALL public records information from the provided documents.
 
 ## Information to Extract:
 - Public Records Count (total number of records found)
@@ -152,7 +226,7 @@ Return VALID JSON only - no markdown, no explanation text.`
 
 Return VALID JSON only - no markdown, no explanation text.`
 
-    console.log(`Sending ${validDocs.length} ${type} documents to Kimi API`)
+    console.log(`Sending ${processedContents.length} ${type} documents to Kimi API for extraction`)
 
     const response = await fetch("https://api.moonshot.ai/v1/chat/completions", {
       method: "POST",
@@ -161,7 +235,7 @@ Return VALID JSON only - no markdown, no explanation text.`
         Authorization: `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
-        model: "moonshot-v1-32k",
+        model: "moonshot-v1-128k",
         temperature: 0.3,
         messages: [
           {
@@ -181,7 +255,7 @@ Return VALID JSON only - no markdown, no explanation text.`
       const errorText = await response.text()
       console.error("Kimi API error:", errorText)
       return NextResponse.json(
-        { success: false, error: "AI processing failed" },
+        { success: false, error: "AI processing failed: " + errorText },
         { status: 500 }
       )
     }
@@ -214,7 +288,7 @@ Return VALID JSON only - no markdown, no explanation text.`
     return NextResponse.json({
       success: true,
       data: extractedData,
-      documentsProcessed: validDocs.length,
+      documentsProcessed: processedContents.length,
     })
   } catch (error) {
     console.error("Privacy document processing error:", error)
