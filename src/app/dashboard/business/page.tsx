@@ -488,47 +488,77 @@ export default function BusinessPage() {
 
     // Read file contents for AI processing
     const documentPromises = pendingFiles.slice(0, 10).map(async (file) => {
-      // Only process text-based documents
-      if (
-        file.type.includes("pdf") ||
+      const isPdf = file.type.includes("pdf") || file.name.toLowerCase().endsWith(".pdf")
+      const isTextFile =
         file.type.includes("text") ||
-        file.type.includes("word") ||
-        file.type.includes("document") ||
         file.name.endsWith(".txt") ||
-        file.name.endsWith(".csv")
-      ) {
+        file.name.endsWith(".csv") ||
+        file.name.endsWith(".md") ||
+        file.name.endsWith(".json")
+
+      // For PDFs, send as base64 for server-side extraction
+      if (isPdf) {
+        try {
+          const arrayBuffer = await file.arrayBuffer()
+          const base64 = btoa(
+            new Uint8Array(arrayBuffer).reduce(
+              (data, byte) => data + String.fromCharCode(byte),
+              ""
+            )
+          )
+          return {
+            fileName: file.name,
+            content: "", // Will be extracted on server
+            type: file.type || "application/pdf",
+            base64: base64,
+          }
+        } catch (e) {
+          console.error("Error reading PDF:", e)
+          return null
+        }
+      }
+
+      // For text files, read content directly
+      if (isTextFile) {
         try {
           const text = await file.text()
           return {
             fileName: file.name,
             content: text,
-            type: file.type,
+            type: file.type || "text/plain",
           }
         } catch {
           return null
         }
       }
-      return {
-        fileName: file.name,
-        content: `[Binary file: ${file.name}]`,
-        type: file.type,
-      }
+
+      // Skip binary files that we can't process
+      return null
     })
 
     const documents = (await Promise.all(documentPromises)).filter(Boolean)
 
+    console.log(`Processing ${documents.length} documents for AI extraction`)
+
     if (documents.length > 0) {
       try {
+        console.log("Sending documents to API:", documents.map(d => d ? { fileName: d.fileName, type: d.type, hasBase64: !!(d as { base64?: string }).base64, contentLength: d.content?.length || 0 } : null))
+
         const response = await fetch("/api/process-documents", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ documents }),
         })
 
+        console.log("API response status:", response.status)
+
         if (response.ok) {
           const result = await response.json()
+          console.log("API result:", result)
+
           if (result.success && result.data) {
             const data = result.data
+            console.log("Extracted business data:", data)
 
             // Auto-populate business profile
             const updatedProfile = {
@@ -539,20 +569,32 @@ export default function BusinessPage() {
               industry: data.industry || businessProfile.industry,
               paydexScore: data.paydexScore || businessProfile.paydexScore,
             }
+            console.log("Updating business profile to:", updatedProfile)
             setBusinessProfile(updatedProfile)
             await saveBusinessProfile(updatedProfile)
+            console.log("Business profile saved to Cognabase")
 
             // Auto-add accounts if found
-            if (data.accounts && data.accounts.length > 0) {
-              const newAccounts = data.accounts.map((acc: Account, index: number) => ({
-                ...acc,
+            if (data.accounts && Array.isArray(data.accounts) && data.accounts.length > 0) {
+              console.log(`Found ${data.accounts.length} accounts to add:`, data.accounts)
+              const newAccounts = data.accounts.map((acc: Partial<Account>, index: number) => ({
                 id: Date.now().toString() + index,
+                name: acc.name || "Unnamed Account",
+                type: (acc.type === "personal" ? "personal" : "business") as "business" | "personal",
+                category: acc.category || "Checking",
+                balance: Number(acc.balance) || 0,
+                institution: acc.institution || "",
+                accountNumber: acc.accountNumber || "",
               }))
+              console.log("Processed accounts:", newAccounts)
               setAccounts((prev) => [...prev, ...newAccounts])
               // Save each account to Cognabase
               for (const acc of newAccounts) {
                 await saveAccount(acc)
+                console.log("Saved account to Cognabase:", acc.name)
               }
+            } else {
+              console.log("No accounts found in AI response")
             }
 
             // Create suggested folders
@@ -590,11 +632,18 @@ export default function BusinessPage() {
               updatedFiles.forEach((file) => saveFile(file))
               return updatedFiles
             })
+          } else {
+            console.log("AI processing completed but no data extracted")
           }
+        } else {
+          const errorText = await response.text()
+          console.error("API error response:", errorText)
         }
       } catch (error) {
         console.error("AI processing failed:", error)
       }
+    } else {
+      console.log("No processable documents found in uploaded files")
     }
 
     setAiProcessing(false)
