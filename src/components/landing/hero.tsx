@@ -201,9 +201,9 @@ export function Hero() {
               <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center mb-4">
                 <Shield className="h-6 w-6 text-blue-600" />
               </div>
-              <h3 className="font-semibold text-gray-900 mb-2">Privacy Services</h3>
+              <h3 className="font-semibold text-gray-900 mb-2">Credit Privacy Numbers</h3>
               <p className="text-sm text-gray-600">
-                Protect your personal information with our comprehensive privacy solutions.
+                Create legal standing privacy partners registered with the IRS for complete financial separation.
               </p>
             </motion.div>
 
