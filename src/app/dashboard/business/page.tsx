@@ -668,16 +668,19 @@ function BusinessPageContent() {
 
     // Read file contents for AI processing
     const documentPromises = pendingFiles.slice(0, 10).map(async (file) => {
-      const isPdf = file.type.includes("pdf") || file.name.toLowerCase().endsWith(".pdf")
+      const ext = file.name.toLowerCase().split(".").pop()
+      const isPdf = file.type.includes("pdf") || ext === "pdf"
+      const isExcel = file.type.includes("spreadsheet") || file.type.includes("excel") || ext === "xlsx" || ext === "xls"
+      const isWord = file.type.includes("document") || file.type.includes("msword") || ext === "docx" || ext === "doc"
       const isTextFile =
         file.type.includes("text") ||
-        file.name.endsWith(".txt") ||
-        file.name.endsWith(".csv") ||
-        file.name.endsWith(".md") ||
-        file.name.endsWith(".json")
+        ext === "txt" ||
+        ext === "csv" ||
+        ext === "md" ||
+        ext === "json"
 
-      // For PDFs, send as base64 for server-side extraction
-      if (isPdf) {
+      // For PDFs, Excel, and Word files, send as base64 with data URI
+      if (isPdf || isExcel || isWord) {
         try {
           const arrayBuffer = await file.arrayBuffer()
           const base64 = btoa(
@@ -686,14 +689,24 @@ function BusinessPageContent() {
               ""
             )
           )
+
+          // Determine correct MIME type
+          let mimeType = file.type
+          if (!mimeType || mimeType === "application/octet-stream") {
+            if (ext === "pdf") mimeType = "application/pdf"
+            else if (ext === "xlsx") mimeType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            else if (ext === "xls") mimeType = "application/vnd.ms-excel"
+            else if (ext === "docx") mimeType = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+            else if (ext === "doc") mimeType = "application/msword"
+          }
+
           return {
             fileName: file.name,
-            content: "", // Will be extracted on server
-            type: file.type || "application/pdf",
-            base64: base64,
+            content: `data:${mimeType};base64,${base64}`,
+            type: mimeType,
           }
         } catch (e) {
-          console.error("Error reading PDF:", e)
+          console.error("Error reading file:", e)
           return null
         }
       }

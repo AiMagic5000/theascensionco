@@ -56,12 +56,12 @@ export default function RegisterIRSPage() {
   const [submitStatus, setSubmitStatus] = useState<"idle" | "success" | "error">("idle")
   const [isLoadingData, setIsLoadingData] = useState(true)
   const [dataSource, setDataSource] = useState<"none" | "profile" | "privacy">("none")
+  const [isRefreshing, setIsRefreshing] = useState(false)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [isDrawing, setIsDrawing] = useState(false)
 
   // Fetch user's data from repository to auto-fill form
-  useEffect(() => {
-    const fetchUserData = async () => {
+  const fetchUserData = async () => {
       if (!user?.id || !isLoaded) return
 
       setIsLoadingData(true)
@@ -139,8 +139,16 @@ export default function RegisterIRSPage() {
       }
     }
 
+  useEffect(() => {
     fetchUserData()
   }, [user?.id, isLoaded, user?.firstName, user?.lastName, user?.primaryPhoneNumber?.phoneNumber])
+
+  // Manual refresh handler
+  const handleRefreshData = async () => {
+    setIsRefreshing(true)
+    await fetchUserData()
+    setIsRefreshing(false)
+  }
 
   const handleServiceToggle = (serviceId: string) => {
     setFormData(prev => ({
@@ -302,22 +310,52 @@ export default function RegisterIRSPage() {
             </div>
           </div>
         </motion.div>
-      ) : dataSource !== "none" ? (
+      ) : (
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
-          className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl p-4"
+          className={`border rounded-xl p-4 ${dataSource !== "none" ? "bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800" : "bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800"}`}
         >
-          <div className="flex items-start gap-3">
-            <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400 mt-0.5 flex-shrink-0" />
-            <div className="text-sm text-green-800 dark:text-green-300">
-              <p className="font-medium mb-1">Form Auto-Filled from Your Data</p>
-              <p>Your personal information has been pre-filled from your {dataSource === "privacy" ? "privacy file" : "profile data"}. Please review and verify all fields before submitting.</p>
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex items-start gap-3 flex-1">
+              {dataSource !== "none" ? (
+                <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400 mt-0.5 flex-shrink-0" />
+              ) : (
+                <AlertCircle className="h-5 w-5 text-amber-600 dark:text-amber-400 mt-0.5 flex-shrink-0" />
+              )}
+              <div className={`text-sm ${dataSource !== "none" ? "text-green-800 dark:text-green-300" : "text-amber-800 dark:text-amber-300"}`}>
+                {dataSource !== "none" ? (
+                  <>
+                    <p className="font-medium mb-1">Form Auto-Filled from Your Data</p>
+                    <p>Your personal information has been pre-filled from your {dataSource === "privacy" ? "privacy file" : "profile data"}. Please review and verify all fields before submitting.</p>
+                  </>
+                ) : (
+                  <>
+                    <p className="font-medium mb-1">No Privacy Data Found</p>
+                    <p>Go to Privacy Services and upload your privacy file documents, then click "Populate with AI" to extract your data. Return here and refresh to auto-fill this form.</p>
+                  </>
+                )}
+              </div>
             </div>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={handleRefreshData}
+              disabled={isRefreshing}
+              className="flex-shrink-0"
+            >
+              {isRefreshing ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <RefreshCw className="h-4 w-4" />
+              )}
+              <span className="ml-2 hidden sm:inline">Refresh</span>
+            </Button>
           </div>
         </motion.div>
-      ) : null}
+      )}
 
       {/* Info Banner */}
       <motion.div

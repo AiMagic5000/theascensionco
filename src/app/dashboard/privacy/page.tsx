@@ -148,6 +148,8 @@ export default function PrivacyPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [aiProcessing, setAiProcessing] = useState(false)
   const [aiProcessingType, setAiProcessingType] = useState<"privacy" | "publicRecords" | null>(null)
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
+  const [isSaving, setIsSaving] = useState(false)
 
   const privacyFileInputRef = useRef<HTMLInputElement>(null)
   const publicRecordsInputRef = useRef<HTMLInputElement>(null)
@@ -317,9 +319,36 @@ export default function PrivacyPage() {
       if (file.type.includes("pdf")) {
         try {
           const arrayBuffer = await file.arrayBuffer()
-          // Convert to base64 and prefix with data URI for AI processing
           const base64 = Buffer.from(arrayBuffer).toString("base64")
           content = `data:application/pdf;base64,${base64}`
+        } catch {
+          content = undefined
+        }
+      }
+
+      // For Excel files, read as base64
+      if (file.type.includes("spreadsheet") || file.type.includes("excel") || file.name.endsWith(".xlsx") || file.name.endsWith(".xls")) {
+        try {
+          const arrayBuffer = await file.arrayBuffer()
+          const base64 = Buffer.from(arrayBuffer).toString("base64")
+          const mimeType = file.name.endsWith(".xlsx")
+            ? "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            : "application/vnd.ms-excel"
+          content = `data:${mimeType};base64,${base64}`
+        } catch {
+          content = undefined
+        }
+      }
+
+      // For Word documents, read as base64
+      if (file.type.includes("document") || file.type.includes("msword") || file.name.endsWith(".docx") || file.name.endsWith(".doc")) {
+        try {
+          const arrayBuffer = await file.arrayBuffer()
+          const base64 = Buffer.from(arrayBuffer).toString("base64")
+          const mimeType = file.name.endsWith(".docx")
+            ? "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+            : "application/msword"
+          content = `data:${mimeType};base64,${base64}`
         } catch {
           content = undefined
         }
@@ -472,6 +501,27 @@ export default function PrivacyPage() {
   // Section toggle
   const toggleSection = (section: string) => {
     setExpandedSection(expandedSection === section ? null : section)
+  }
+
+  // Handle field update
+  const handleFieldChange = (field: keyof PrivacyFileData, value: string | number) => {
+    setPrivacyFileData(prev => ({ ...prev, [field]: value }))
+    setHasUnsavedChanges(true)
+  }
+
+  // Manual save handler
+  const handleSaveChanges = async () => {
+    setIsSaving(true)
+    try {
+      await savePrivacyData(privacyFileData)
+      setHasUnsavedChanges(false)
+      alert("Changes saved successfully!")
+    } catch (error) {
+      console.error("Error saving changes:", error)
+      alert("Failed to save changes. Please try again.")
+    } finally {
+      setIsSaving(false)
+    }
   }
 
   return (
@@ -837,13 +887,36 @@ export default function PrivacyPage() {
       {/* Privacy File Preview */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Lock className="h-5 w-5" />
-            Privacy File Preview
-          </CardTitle>
-          <CardDescription>
-            Your complete privacy file data. Click sections to expand.
-          </CardDescription>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <Lock className="h-5 w-5" />
+                Privacy File Preview
+              </CardTitle>
+              <CardDescription>
+                Your complete privacy file data. Click sections to expand and edit.
+              </CardDescription>
+            </div>
+            {hasUnsavedChanges && (
+              <Button
+                onClick={handleSaveChanges}
+                disabled={isSaving}
+                className="bg-green-600 hover:bg-green-700 text-white"
+              >
+                {isSaving ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle className="h-4 w-4 mr-2" />
+                    Save Changes
+                  </>
+                )}
+              </Button>
+            )}
+          </div>
         </CardHeader>
         <CardContent>
           <div className="relative">
@@ -881,42 +954,86 @@ export default function PrivacyPage() {
                 {expandedSection === "personal" && (
                   <div className="p-4 pt-0 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     <div>
-                      <label className="text-xs font-medium text-gray-500 uppercase">Full Name</label>
-                      <p className="text-sm text-gray-900 dark:text-white mt-1">{privacyFileData.fullName || "-"}</p>
+                      <label className="text-xs font-medium text-gray-500 uppercase block mb-1">Full Name</label>
+                      <Input
+                        value={privacyFileData.fullName || ""}
+                        onChange={(e) => handleFieldChange("fullName", e.target.value)}
+                        placeholder="Enter full name"
+                        className="text-sm"
+                      />
                     </div>
                     <div>
-                      <label className="text-xs font-medium text-gray-500 uppercase">Date of Birth</label>
-                      <p className="text-sm text-gray-900 dark:text-white mt-1">{privacyFileData.dateOfBirth || "-"}</p>
+                      <label className="text-xs font-medium text-gray-500 uppercase block mb-1">Date of Birth</label>
+                      <Input
+                        value={privacyFileData.dateOfBirth || ""}
+                        onChange={(e) => handleFieldChange("dateOfBirth", e.target.value)}
+                        placeholder="MM/DD/YYYY"
+                        className="text-sm"
+                      />
                     </div>
                     <div>
-                      <label className="text-xs font-medium text-gray-500 uppercase">SSN</label>
-                      <p className="text-sm text-gray-900 dark:text-white mt-1 font-mono">
-                        {privacyFileData.ssn ? "•••-••-" + privacyFileData.ssn.slice(-4) : "-"}
-                      </p>
+                      <label className="text-xs font-medium text-gray-500 uppercase block mb-1">SSN</label>
+                      <Input
+                        value={privacyFileData.ssn || ""}
+                        onChange={(e) => handleFieldChange("ssn", e.target.value)}
+                        placeholder="XXX-XX-XXXX"
+                        className="text-sm font-mono"
+                      />
                     </div>
                     <div className="md:col-span-2">
-                      <label className="text-xs font-medium text-gray-500 uppercase">Address</label>
-                      <p className="text-sm text-gray-900 dark:text-white mt-1">{privacyFileData.address || "-"}</p>
+                      <label className="text-xs font-medium text-gray-500 uppercase block mb-1">Address</label>
+                      <Input
+                        value={privacyFileData.address || ""}
+                        onChange={(e) => handleFieldChange("address", e.target.value)}
+                        placeholder="Enter street address"
+                        className="text-sm"
+                      />
                     </div>
                     <div>
-                      <label className="text-xs font-medium text-gray-500 uppercase">City</label>
-                      <p className="text-sm text-gray-900 dark:text-white mt-1">{privacyFileData.city || "-"}</p>
+                      <label className="text-xs font-medium text-gray-500 uppercase block mb-1">City</label>
+                      <Input
+                        value={privacyFileData.city || ""}
+                        onChange={(e) => handleFieldChange("city", e.target.value)}
+                        placeholder="Enter city"
+                        className="text-sm"
+                      />
                     </div>
                     <div>
-                      <label className="text-xs font-medium text-gray-500 uppercase">State</label>
-                      <p className="text-sm text-gray-900 dark:text-white mt-1">{privacyFileData.state || "-"}</p>
+                      <label className="text-xs font-medium text-gray-500 uppercase block mb-1">State</label>
+                      <Input
+                        value={privacyFileData.state || ""}
+                        onChange={(e) => handleFieldChange("state", e.target.value)}
+                        placeholder="Enter state"
+                        className="text-sm"
+                      />
                     </div>
                     <div>
-                      <label className="text-xs font-medium text-gray-500 uppercase">ZIP Code</label>
-                      <p className="text-sm text-gray-900 dark:text-white mt-1">{privacyFileData.zip || "-"}</p>
+                      <label className="text-xs font-medium text-gray-500 uppercase block mb-1">ZIP Code</label>
+                      <Input
+                        value={privacyFileData.zip || ""}
+                        onChange={(e) => handleFieldChange("zip", e.target.value)}
+                        placeholder="Enter ZIP"
+                        className="text-sm"
+                      />
                     </div>
                     <div>
-                      <label className="text-xs font-medium text-gray-500 uppercase">Phone</label>
-                      <p className="text-sm text-gray-900 dark:text-white mt-1">{privacyFileData.phone || "-"}</p>
+                      <label className="text-xs font-medium text-gray-500 uppercase block mb-1">Phone</label>
+                      <Input
+                        value={privacyFileData.phone || ""}
+                        onChange={(e) => handleFieldChange("phone", e.target.value)}
+                        placeholder="Enter phone number"
+                        className="text-sm"
+                      />
                     </div>
                     <div>
-                      <label className="text-xs font-medium text-gray-500 uppercase">Email</label>
-                      <p className="text-sm text-gray-900 dark:text-white mt-1">{privacyFileData.email || "-"}</p>
+                      <label className="text-xs font-medium text-gray-500 uppercase block mb-1">Email</label>
+                      <Input
+                        value={privacyFileData.email || ""}
+                        onChange={(e) => handleFieldChange("email", e.target.value)}
+                        placeholder="Enter email"
+                        type="email"
+                        className="text-sm"
+                      />
                     </div>
                   </div>
                 )}
@@ -941,24 +1058,35 @@ export default function PrivacyPage() {
                 {expandedSection === "privacy" && (
                   <div className="p-4 pt-0 grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div>
-                      <label className="text-xs font-medium text-gray-500 uppercase">Privacy Number (CPN)</label>
-                      <p className="text-sm text-gray-900 dark:text-white mt-1 font-mono">
-                        {privacyFileData.privacyNumber || "-"}
-                      </p>
+                      <label className="text-xs font-medium text-gray-500 uppercase block mb-1">Privacy Number (CPN)</label>
+                      <Input
+                        value={privacyFileData.privacyNumber || ""}
+                        onChange={(e) => handleFieldChange("privacyNumber", e.target.value)}
+                        placeholder="XXX-XX-XXXX"
+                        className="text-sm font-mono"
+                      />
                     </div>
                     <div>
-                      <label className="text-xs font-medium text-gray-500 uppercase">Issue Date</label>
-                      <p className="text-sm text-gray-900 dark:text-white mt-1">{privacyFileData.privacyNumberIssueDate || "-"}</p>
+                      <label className="text-xs font-medium text-gray-500 uppercase block mb-1">Issue Date</label>
+                      <Input
+                        value={privacyFileData.privacyNumberIssueDate || ""}
+                        onChange={(e) => handleFieldChange("privacyNumberIssueDate", e.target.value)}
+                        placeholder="MM/DD/YYYY"
+                        className="text-sm"
+                      />
                     </div>
                     <div>
-                      <label className="text-xs font-medium text-gray-500 uppercase">Status</label>
-                      <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium mt-1 ${
-                        privacyFileData.privacyNumberStatus === "Active"
-                          ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
-                          : "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400"
-                      }`}>
-                        {privacyFileData.privacyNumberStatus || "Pending"}
-                      </span>
+                      <label className="text-xs font-medium text-gray-500 uppercase block mb-1">Status</label>
+                      <select
+                        value={privacyFileData.privacyNumberStatus || "Pending"}
+                        onChange={(e) => handleFieldChange("privacyNumberStatus", e.target.value)}
+                        className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      >
+                        <option value="Pending">Pending</option>
+                        <option value="Active">Active</option>
+                        <option value="Expired">Expired</option>
+                        <option value="Under Review">Under Review</option>
+                      </select>
                     </div>
                   </div>
                 )}
@@ -984,18 +1112,38 @@ export default function PrivacyPage() {
                   <div className="p-4 pt-0">
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
                       <div>
-                        <label className="text-xs font-medium text-gray-500 uppercase">Credit Score</label>
-                        <p className="text-2xl font-bold text-gray-900 dark:text-white mt-1">
-                          {privacyFileData.creditScore || "-"}
-                        </p>
+                        <label className="text-xs font-medium text-gray-500 uppercase block mb-1">Credit Score</label>
+                        <Input
+                          type="number"
+                          value={privacyFileData.creditScore || ""}
+                          onChange={(e) => handleFieldChange("creditScore", parseInt(e.target.value) || 0)}
+                          placeholder="300-850"
+                          min={300}
+                          max={850}
+                          className="text-lg font-bold"
+                        />
                       </div>
                       <div>
-                        <label className="text-xs font-medium text-gray-500 uppercase">Credit Bureau</label>
-                        <p className="text-sm text-gray-900 dark:text-white mt-1">{privacyFileData.creditBureau || "-"}</p>
+                        <label className="text-xs font-medium text-gray-500 uppercase block mb-1">Credit Bureau</label>
+                        <select
+                          value={privacyFileData.creditBureau || ""}
+                          onChange={(e) => handleFieldChange("creditBureau", e.target.value)}
+                          className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        >
+                          <option value="">Select Bureau</option>
+                          <option value="Equifax">Equifax</option>
+                          <option value="Experian">Experian</option>
+                          <option value="TransUnion">TransUnion</option>
+                        </select>
                       </div>
                       <div>
-                        <label className="text-xs font-medium text-gray-500 uppercase">Report Date</label>
-                        <p className="text-sm text-gray-900 dark:text-white mt-1">{privacyFileData.creditReportDate || "-"}</p>
+                        <label className="text-xs font-medium text-gray-500 uppercase block mb-1">Report Date</label>
+                        <Input
+                          value={privacyFileData.creditReportDate || ""}
+                          onChange={(e) => handleFieldChange("creditReportDate", e.target.value)}
+                          placeholder="MM/DD/YYYY"
+                          className="text-sm"
+                        />
                       </div>
                     </div>
 
@@ -1061,18 +1209,28 @@ export default function PrivacyPage() {
                 {expandedSection === "publicRecords" && (
                   <div className="p-4 pt-0 grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <label className="text-xs font-medium text-gray-500 uppercase">Records Count</label>
-                      <p className="text-sm text-gray-900 dark:text-white mt-1">{privacyFileData.publicRecordsCount || 0}</p>
+                      <label className="text-xs font-medium text-gray-500 uppercase block mb-1">Records Count</label>
+                      <Input
+                        type="number"
+                        value={privacyFileData.publicRecordsCount || 0}
+                        onChange={(e) => handleFieldChange("publicRecordsCount", parseInt(e.target.value) || 0)}
+                        placeholder="0"
+                        min={0}
+                        className="text-sm"
+                      />
                     </div>
                     <div>
-                      <label className="text-xs font-medium text-gray-500 uppercase">Status</label>
-                      <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium mt-1 ${
-                        privacyFileData.publicRecordsStatus === "Clear"
-                          ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
-                          : "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400"
-                      }`}>
-                        {privacyFileData.publicRecordsStatus || "Pending"}
-                      </span>
+                      <label className="text-xs font-medium text-gray-500 uppercase block mb-1">Status</label>
+                      <select
+                        value={privacyFileData.publicRecordsStatus || "Pending"}
+                        onChange={(e) => handleFieldChange("publicRecordsStatus", e.target.value)}
+                        className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      >
+                        <option value="Pending">Pending</option>
+                        <option value="Clear">Clear</option>
+                        <option value="Items Found">Items Found</option>
+                        <option value="Under Review">Under Review</option>
+                      </select>
                     </div>
                   </div>
                 )}
@@ -1096,9 +1254,13 @@ export default function PrivacyPage() {
                 </button>
                 {expandedSection === "notes" && (
                   <div className="p-4 pt-0">
-                    <p className="text-sm text-gray-600 dark:text-gray-400 whitespace-pre-wrap">
-                      {privacyFileData.notes || "No notes available."}
-                    </p>
+                    <textarea
+                      value={privacyFileData.notes || ""}
+                      onChange={(e) => handleFieldChange("notes", e.target.value)}
+                      placeholder="Add notes about this privacy file..."
+                      rows={4}
+                      className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 resize-y"
+                    />
                   </div>
                 )}
               </div>

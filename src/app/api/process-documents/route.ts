@@ -7,6 +7,85 @@ interface DocumentData {
   base64?: string // For binary files like PDFs
 }
 
+// Determine MIME type from data URI or filename
+function getMimeType(content: string, fileName: string): string {
+  if (content.startsWith("data:")) {
+    const match = content.match(/^data:([^;,]+)/)
+    if (match) return match[1]
+  }
+
+  const ext = fileName.toLowerCase().split(".").pop()
+  const mimeTypes: Record<string, string> = {
+    pdf: "application/pdf",
+    xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    xls: "application/vnd.ms-excel",
+    doc: "application/msword",
+    docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    txt: "text/plain",
+    csv: "text/csv",
+  }
+  return mimeTypes[ext || ""] || "application/octet-stream"
+}
+
+// Upload file to Kimi and get file ID
+async function uploadFileToKimi(base64Content: string, fileName: string, apiKey: string): Promise<string | null> {
+  try {
+    const base64Data = base64Content.includes(",")
+      ? base64Content.split(",")[1]
+      : base64Content
+
+    const buffer = Buffer.from(base64Data, "base64")
+    const mimeType = getMimeType(base64Content, fileName)
+
+    const formData = new FormData()
+    const blob = new Blob([buffer], { type: mimeType })
+    formData.append("file", blob, fileName)
+    formData.append("purpose", "file-extract")
+
+    const response = await fetch("https://api.moonshot.ai/v1/files", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: formData,
+    })
+
+    if (!response.ok) {
+      const errorText = await response.text()
+      console.error("Kimi file upload error:", errorText)
+      return null
+    }
+
+    const data = await response.json()
+    return data.id
+  } catch (error) {
+    console.error("Error uploading file to Kimi:", error)
+    return null
+  }
+}
+
+// Get file content from Kimi
+async function getFileContent(fileId: string, apiKey: string): Promise<string | null> {
+  try {
+    const response = await fetch(`https://api.moonshot.ai/v1/files/${fileId}/content`, {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+      },
+    })
+
+    if (!response.ok) {
+      console.error("Kimi file content error:", response.status)
+      return null
+    }
+
+    return await response.text()
+  } catch (error) {
+    console.error("Error getting file content:", error)
+    return null
+  }
+}
+
 interface ExtractedBusinessInfo {
   companyName?: string
   ein?: string
@@ -147,27 +226,44 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Process documents and extract text
-    const processedDocs = await Promise.all(
-      documents.map(async (doc) => {
-        let textContent = doc.content
+    // Process documents and extract text using Kimi file API
+    const processedDocs: { fileName: string; type: string; content: string }[] = []
 
-        // If it's a PDF with base64 data, extract text
-        if (doc.type.includes("pdf") && doc.base64) {
-          console.log(`Extracting text from PDF: ${doc.fileName}`)
-          textContent = extractTextFromPdfBinary(doc.base64)
-          console.log(
-            `Extracted ${textContent.length} characters from ${doc.fileName}`
-          )
-        }
+    for (const doc of documents) {
+      let textContent = doc.content
+      const ext = doc.fileName.toLowerCase().split(".").pop()
+      const isUploadableFile = ext === "pdf" || ext === "xlsx" || ext === "xls" || ext === "doc" || ext === "docx"
 
-        return {
-          fileName: doc.fileName,
-          type: doc.type,
-          content: textContent,
+      // Check if content is base64-encoded (from file upload)
+      const isBase64 = doc.content?.startsWith("data:") || doc.base64
+
+      if (isUploadableFile && (isBase64 || doc.base64)) {
+        const base64Content = doc.content?.startsWith("data:") ? doc.content :
+                             doc.base64 ? `data:application/pdf;base64,${doc.base64}` : null
+
+        if (base64Content) {
+          console.log(`Uploading ${ext} file to Kimi: ${doc.fileName}`)
+          const fileId = await uploadFileToKimi(base64Content, doc.fileName, apiKey)
+          if (fileId) {
+            const fileContent = await getFileContent(fileId, apiKey)
+            if (fileContent) {
+              textContent = fileContent
+              console.log(`Extracted ${textContent.length} characters from ${doc.fileName}`)
+            }
+          }
         }
+      } else if (doc.type.includes("pdf") && doc.base64) {
+        // Fallback to basic extraction if upload fails
+        console.log(`Fallback extraction from PDF: ${doc.fileName}`)
+        textContent = extractTextFromPdfBinary(doc.base64)
+      }
+
+      processedDocs.push({
+        fileName: doc.fileName,
+        type: doc.type,
+        content: textContent,
       })
-    )
+    }
 
     // Filter out documents with no meaningful content
     const validDocs = processedDocs.filter(
@@ -206,7 +302,7 @@ ${truncatedContent}
         Authorization: `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
-        model: "moonshot-v1-32k",
+        model: "moonshot-v1-128k",
         temperature: 0.3,
         messages: [
           {

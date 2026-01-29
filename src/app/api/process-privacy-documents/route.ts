@@ -42,6 +42,29 @@ interface ExtractedPrivacyInfo {
   notes?: string
 }
 
+// Determine MIME type from data URI or filename
+function getMimeType(content: string, fileName: string): string {
+  if (content.startsWith("data:")) {
+    const match = content.match(/^data:([^;,]+)/)
+    if (match) return match[1]
+  }
+
+  const ext = fileName.toLowerCase().split(".").pop()
+  const mimeTypes: Record<string, string> = {
+    pdf: "application/pdf",
+    xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    xls: "application/vnd.ms-excel",
+    doc: "application/msword",
+    docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    txt: "text/plain",
+    csv: "text/csv",
+    png: "image/png",
+    jpg: "image/jpeg",
+    jpeg: "image/jpeg",
+  }
+  return mimeTypes[ext || ""] || "application/octet-stream"
+}
+
 // Upload file to Kimi and get file ID
 async function uploadFileToKimi(base64Content: string, fileName: string, apiKey: string): Promise<string | null> {
   try {
@@ -53,9 +76,12 @@ async function uploadFileToKimi(base64Content: string, fileName: string, apiKey:
     // Convert base64 to buffer
     const buffer = Buffer.from(base64Data, "base64")
 
+    // Determine the correct MIME type
+    const mimeType = getMimeType(base64Content, fileName)
+
     // Create FormData with the file
     const formData = new FormData()
-    const blob = new Blob([buffer], { type: "application/pdf" })
+    const blob = new Blob([buffer], { type: mimeType })
     formData.append("file", blob, fileName)
     formData.append("purpose", "file-extract")
 
@@ -130,9 +156,13 @@ export async function POST(request: NextRequest) {
     for (const doc of documents) {
       if (!doc.content || doc.content.trim().length < 10) continue
 
-      // Check if it's a base64-encoded PDF or image
-      if (doc.content.startsWith("data:application/pdf;base64,")) {
-        console.log(`Uploading PDF: ${doc.fileName}`)
+      // Check file type by content prefix or extension
+      const isBase64File = doc.content.startsWith("data:")
+      const ext = doc.fileName.toLowerCase().split(".").pop()
+      const isUploadableFile = ext === "pdf" || ext === "xlsx" || ext === "xls" || ext === "doc" || ext === "docx"
+
+      if (isBase64File && isUploadableFile) {
+        console.log(`Uploading file: ${doc.fileName} (${ext})`)
         const fileId = await uploadFileToKimi(doc.content, doc.fileName, apiKey)
         if (fileId) {
           const fileContent = await getFileContent(fileId, apiKey)
