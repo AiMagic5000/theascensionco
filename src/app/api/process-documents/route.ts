@@ -194,7 +194,7 @@ ${truncatedContent}
         Authorization: `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
-        model: "kimi-k2.5-preview",
+        model: "moonshot-v1-32k",
         temperature: 0.3,
         messages: [
           {
