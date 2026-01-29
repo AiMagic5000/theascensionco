@@ -36,6 +36,7 @@ import {
   CheckCircle,
   Clock,
   Filter,
+  Shield,
 } from "lucide-react"
 
 // Types
@@ -858,6 +859,19 @@ export default function BusinessPage() {
                     </div>
                   </div>
 
+                  {/* Security Notice */}
+                  <div className="mb-4 p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
+                    <div className="flex items-start gap-2">
+                      <Shield className="h-5 w-5 text-green-600 dark:text-green-400 mt-0.5 flex-shrink-0" />
+                      <div>
+                        <p className="text-sm font-medium text-green-800 dark:text-green-300">Secure & Encrypted</p>
+                        <p className="text-xs text-green-700 dark:text-green-400 mt-0.5">
+                          Your data is transmitted using TLS encryption. Documents are processed securely and never stored on external servers.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
                   {aiProcessing ? (
                     <div className="space-y-3 mb-6">
                       <div className="flex items-center gap-3 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
@@ -874,24 +888,29 @@ export default function BusinessPage() {
                       </div>
                     </div>
                   ) : (
-                    <div className="space-y-3 mb-6">
-                      <div className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                        <CheckCircle className="h-5 w-5 text-green-500" />
-                        <span className="text-sm text-gray-700 dark:text-gray-300">Extract company name, EIN, DUNS from documents</span>
+                    <>
+                      <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                        Drop your entire business folder and our AI will automatically populate your dashboard with all relevant information.
+                      </p>
+                      <div className="space-y-3 mb-6">
+                        <div className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                          <CheckCircle className="h-5 w-5 text-green-500" />
+                          <span className="text-sm text-gray-700 dark:text-gray-300">Extract company name, EIN, DUNS from documents</span>
+                        </div>
+                        <div className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                          <CheckCircle className="h-5 w-5 text-green-500" />
+                          <span className="text-sm text-gray-700 dark:text-gray-300">Auto-categorize files into appropriate folders</span>
+                        </div>
+                        <div className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                          <CheckCircle className="h-5 w-5 text-green-500" />
+                          <span className="text-sm text-gray-700 dark:text-gray-300">Detect bank accounts and financial data</span>
+                        </div>
+                        <div className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                          <CheckCircle className="h-5 w-5 text-green-500" />
+                          <span className="text-sm text-gray-700 dark:text-gray-300">Populate business profile automatically</span>
+                        </div>
                       </div>
-                      <div className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                        <CheckCircle className="h-5 w-5 text-green-500" />
-                        <span className="text-sm text-gray-700 dark:text-gray-300">Auto-categorize files into appropriate folders</span>
-                      </div>
-                      <div className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                        <CheckCircle className="h-5 w-5 text-green-500" />
-                        <span className="text-sm text-gray-700 dark:text-gray-300">Detect bank accounts and financial data</span>
-                      </div>
-                      <div className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                        <CheckCircle className="h-5 w-5 text-green-500" />
-                        <span className="text-sm text-gray-700 dark:text-gray-300">Populate business profile automatically</span>
-                      </div>
-                    </div>
+                    </>
                   )}
 
                   <div className="flex justify-end gap-2">
