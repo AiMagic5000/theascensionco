@@ -29,7 +29,9 @@ import {
   FolderOpen,
   ChevronRight,
   Info,
+  ExternalLink,
   ChevronDown,
+  ChevronUp,
   Search,
   Grid,
   List,
@@ -120,6 +122,8 @@ export default function BusinessPage() {
   const [accounts, setAccounts] = useState(initialAccounts)
   const [editingProfile, setEditingProfile] = useState(false)
   const [showAddAccount, setShowAddAccount] = useState(false)
+  const [editingAccountId, setEditingAccountId] = useState<string | null>(null)
+  const [expandedAccountId, setExpandedAccountId] = useState<string | null>(null)
   const [accountFilter, setAccountFilter] = useState<"all" | "business" | "personal">("all")
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
@@ -772,6 +776,44 @@ export default function BusinessPage() {
   const handleDeleteAccount = async (id: string) => {
     setAccounts(accounts.filter((a) => a.id !== id))
     await deleteAccount(id)
+  }
+
+  const handleUpdateAccount = async (id: string, updates: Partial<Account>) => {
+    const updatedAccounts = accounts.map((a) =>
+      a.id === id ? { ...a, ...updates } : a
+    )
+    setAccounts(updatedAccounts)
+    const updatedAccount = updatedAccounts.find((a) => a.id === id)
+    if (updatedAccount) {
+      await saveAccount(updatedAccount)
+    }
+  }
+
+  // Helper to detect and make URLs clickable
+  const formatWithLinks = (text: string) => {
+    if (!text) return text
+    const urlRegex = /(https?:\/\/[^\s]+)|(www\.[^\s]+)|([a-zA-Z0-9.-]+\.(com|org|net|io|co|us|gov|edu)[^\s]*)/gi
+    const parts = text.split(urlRegex).filter(Boolean)
+
+    return parts.map((part, i) => {
+      if (part && (part.startsWith('http') || part.startsWith('www.') || /\.(com|org|net|io|co|us|gov|edu)/i.test(part))) {
+        const url = part.startsWith('http') ? part : `https://${part}`
+        return (
+          <a
+            key={i}
+            href={url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-blue-500 hover:text-blue-600 hover:underline inline-flex items-center gap-1"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {part}
+            <ExternalLink className="h-3 w-3" />
+          </a>
+        )
+      }
+      return part
+    })
   }
 
   // Populate business profile and accounts from all uploaded documents using AI
@@ -1875,26 +1917,174 @@ export default function BusinessPage() {
                   accounts.map((account) => (
                     <div
                       key={account.id}
-                      className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700"
+                      className="bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden"
                     >
-                      <div>
-                        <p className="font-medium text-gray-900 dark:text-white">{account.name}</p>
-                        <p className="text-sm text-gray-500">{account.institution} - {account.accountNumber}</p>
+                      {/* Account Header - Always Visible */}
+                      <div
+                        className="flex items-center justify-between p-4 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700/50 transition-colors"
+                        onClick={() => setExpandedAccountId(expandedAccountId === account.id ? null : account.id)}
+                      >
+                        <div className="flex-1">
+                          <p className="font-medium text-gray-900 dark:text-white">{account.name}</p>
+                          <p className="text-sm text-gray-500">{formatWithLinks(account.institution)} {account.accountNumber && account.accountNumber !== "N/A" ? `- ${account.accountNumber}` : ""}</p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs px-2 py-1 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300">
+                            {account.category || "Other"}
+                          </span>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              setEditingAccountId(editingAccountId === account.id ? null : account.id)
+                              setExpandedAccountId(account.id)
+                            }}
+                            className="text-gray-600 hover:text-blue-600 hover:bg-blue-50"
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              handleDeleteAccount(account.id)
+                            }}
+                            className="text-red-600 hover:bg-red-50"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                          {expandedAccountId === account.id ? (
+                            <ChevronUp className="h-4 w-4 text-gray-400" />
+                          ) : (
+                            <ChevronDown className="h-4 w-4 text-gray-400" />
+                          )}
+                        </div>
                       </div>
-                      <div className="flex items-center gap-4">
-                        <span className={`font-medium ${account.balance < 0 ? "text-red-600" : "text-gray-900 dark:text-white"}`}>
-                          ${Math.abs(account.balance).toLocaleString("en-US", { minimumFractionDigits: 2 })}
-                          {account.balance < 0 && " CR"}
-                        </span>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleDeleteAccount(account.id)}
-                          className="text-red-600 hover:bg-red-50"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
+
+                      {/* Expanded Account Details */}
+                      {expandedAccountId === account.id && (
+                        <div className="px-4 pb-4 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50">
+                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pt-4">
+                            {/* Account Name */}
+                            <div>
+                              <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Account Name</label>
+                              {editingAccountId === account.id ? (
+                                <Input
+                                  value={account.name}
+                                  onChange={(e) => handleUpdateAccount(account.id, { name: e.target.value })}
+                                  className="mt-1"
+                                />
+                              ) : (
+                                <p className="text-sm text-gray-900 dark:text-white mt-1">{account.name}</p>
+                              )}
+                            </div>
+
+                            {/* Institution */}
+                            <div>
+                              <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Institution / Provider</label>
+                              {editingAccountId === account.id ? (
+                                <Input
+                                  value={account.institution}
+                                  onChange={(e) => handleUpdateAccount(account.id, { institution: e.target.value })}
+                                  className="mt-1"
+                                />
+                              ) : (
+                                <p className="text-sm text-gray-900 dark:text-white mt-1">{formatWithLinks(account.institution)}</p>
+                              )}
+                            </div>
+
+                            {/* Account Number */}
+                            <div>
+                              <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Account Number</label>
+                              {editingAccountId === account.id ? (
+                                <Input
+                                  value={account.accountNumber}
+                                  onChange={(e) => handleUpdateAccount(account.id, { accountNumber: e.target.value })}
+                                  className="mt-1"
+                                />
+                              ) : (
+                                <p className="text-sm text-gray-900 dark:text-white mt-1">{account.accountNumber || "N/A"}</p>
+                              )}
+                            </div>
+
+                            {/* Category */}
+                            <div>
+                              <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Category</label>
+                              {editingAccountId === account.id ? (
+                                <select
+                                  value={account.category}
+                                  onChange={(e) => handleUpdateAccount(account.id, { category: e.target.value })}
+                                  className="mt-1 w-full h-10 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 px-3 py-2 text-sm text-gray-900 dark:text-gray-50"
+                                >
+                                  <option value="Checking">Checking</option>
+                                  <option value="Savings">Savings</option>
+                                  <option value="Credit Card">Credit Card</option>
+                                  <option value="Line of Credit">Line of Credit</option>
+                                  <option value="Loan">Loan</option>
+                                  <option value="Money Market">Money Market</option>
+                                  <option value="Net-30">Net-30</option>
+                                  <option value="Email">Email</option>
+                                  <option value="Domain">Domain</option>
+                                  <option value="Insurance">Insurance</option>
+                                  <option value="Other">Other</option>
+                                </select>
+                              ) : (
+                                <p className="text-sm text-gray-900 dark:text-white mt-1">{account.category || "Other"}</p>
+                              )}
+                            </div>
+
+                            {/* Type */}
+                            <div>
+                              <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Account Type</label>
+                              {editingAccountId === account.id ? (
+                                <select
+                                  value={account.type}
+                                  onChange={(e) => handleUpdateAccount(account.id, { type: e.target.value as "business" | "personal" })}
+                                  className="mt-1 w-full h-10 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 px-3 py-2 text-sm text-gray-900 dark:text-gray-50"
+                                >
+                                  <option value="business">Business</option>
+                                  <option value="personal">Personal</option>
+                                </select>
+                              ) : (
+                                <p className="text-sm text-gray-900 dark:text-white mt-1 capitalize">{account.type}</p>
+                              )}
+                            </div>
+
+                            {/* Balance */}
+                            <div>
+                              <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Balance / Limit</label>
+                              {editingAccountId === account.id ? (
+                                <Input
+                                  type="number"
+                                  value={account.balance}
+                                  onChange={(e) => handleUpdateAccount(account.id, { balance: parseFloat(e.target.value) || 0 })}
+                                  className="mt-1"
+                                />
+                              ) : (
+                                <p className={`text-sm mt-1 ${account.balance < 0 ? "text-red-600" : "text-gray-900 dark:text-white"}`}>
+                                  ${Math.abs(account.balance).toLocaleString("en-US", { minimumFractionDigits: 2 })}
+                                  {account.balance < 0 && " (Credit)"}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Edit Mode Actions */}
+                          {editingAccountId === account.id && (
+                            <div className="flex justify-end gap-2 mt-4 pt-4 border-t border-gray-200 dark:border-gray-600">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => setEditingAccountId(null)}
+                              >
+                                Done Editing
+                              </Button>
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
                   ))
                 )}
