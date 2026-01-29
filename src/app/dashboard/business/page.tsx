@@ -574,18 +574,45 @@ function BusinessPageContent() {
       const blobUrl = URL.createObjectURL(file)
       const fileId = crypto.randomUUID()
 
-      // Read text content for text-based files
+      // Read content based on file type
       let content: string | undefined
+      const ext = file.name.toLowerCase().split(".").pop()
       const isTextFile =
         file.type.includes("text") ||
-        file.name.endsWith(".txt") ||
-        file.name.endsWith(".csv") ||
-        file.name.endsWith(".md") ||
-        file.name.endsWith(".json")
+        ext === "txt" ||
+        ext === "csv" ||
+        ext === "md" ||
+        ext === "json"
+      const isPdf = file.type.includes("pdf") || ext === "pdf"
+      const isExcel = file.type.includes("spreadsheet") || file.type.includes("excel") || ext === "xlsx" || ext === "xls"
+      const isWord = file.type.includes("document") || file.type.includes("msword") || ext === "docx" || ext === "doc"
 
       if (isTextFile) {
         try {
           content = await file.text()
+        } catch {
+          content = undefined
+        }
+      } else if (isPdf || isExcel || isWord) {
+        // Read binary files as base64 with data URI for AI processing
+        try {
+          const arrayBuffer = await file.arrayBuffer()
+          const base64 = btoa(
+            new Uint8Array(arrayBuffer).reduce(
+              (data, byte) => data + String.fromCharCode(byte),
+              ""
+            )
+          )
+          // Determine correct MIME type
+          let mimeType = file.type
+          if (!mimeType || mimeType === "application/octet-stream") {
+            if (ext === "pdf") mimeType = "application/pdf"
+            else if (ext === "xlsx") mimeType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            else if (ext === "xls") mimeType = "application/vnd.ms-excel"
+            else if (ext === "docx") mimeType = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+            else if (ext === "doc") mimeType = "application/msword"
+          }
+          content = `data:${mimeType};base64,${base64}`
         } catch {
           content = undefined
         }
@@ -996,20 +1023,24 @@ function BusinessPageContent() {
       // Gather all documents with content
       const documents = files
         .filter((file) => {
-          // Only process files that have content or are text-based
+          // Only process files that have content
+          const ext = file.name.toLowerCase().split(".").pop()
           const isTextFile =
             file.type.includes("text") ||
-            file.name.endsWith(".txt") ||
-            file.name.endsWith(".csv") ||
-            file.name.endsWith(".md") ||
-            file.name.endsWith(".json")
-          const isPdf = file.type.includes("pdf") || file.name.toLowerCase().endsWith(".pdf")
-          return file.content || isTextFile || isPdf
+            ext === "txt" ||
+            ext === "csv" ||
+            ext === "md" ||
+            ext === "json"
+          const isPdf = file.type.includes("pdf") || ext === "pdf"
+          const isExcel = file.type.includes("spreadsheet") || file.type.includes("excel") || ext === "xlsx" || ext === "xls"
+          const isWord = file.type.includes("document") || file.type.includes("msword") || ext === "docx" || ext === "doc"
+          // Must have content to process
+          return file.content && (isTextFile || isPdf || isExcel || isWord)
         })
         .slice(0, 15) // Limit to 15 documents
         .map((file) => ({
           fileName: file.name,
-          content: file.content || `[File: ${file.name}]`,
+          content: file.content || "",
           type: file.type,
         }))
 
