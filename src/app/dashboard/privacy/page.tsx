@@ -1,8 +1,9 @@
 "use client"
 
-import { useState, useCallback, useRef } from "react"
+import { useState, useCallback, useRef, useEffect } from "react"
 import { motion } from "framer-motion"
 import { useUser } from "@clerk/nextjs"
+import { supabase } from "@/lib/supabase"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -33,6 +34,8 @@ import {
   Calendar,
   Building,
   Hash,
+  Info,
+  Loader2,
 } from "lucide-react"
 
 // Privacy file data structure
@@ -115,7 +118,7 @@ function formatFileSize(bytes: number): string {
 }
 
 export default function PrivacyPage() {
-  const { user } = useUser()
+  const { user, isLoaded } = useUser()
   const [showSensitive, setShowSensitive] = useState(false)
   const [privacyFiles, setPrivacyFiles] = useState<DownloadFile[]>([])
   const [publicRecordFiles, setPublicRecordFiles] = useState<DownloadFile[]>([])
@@ -142,11 +145,152 @@ export default function PrivacyPage() {
     notes: "",
   })
   const [expandedSection, setExpandedSection] = useState<string | null>("personal")
+  const [isLoading, setIsLoading] = useState(true)
+  const [aiProcessing, setAiProcessing] = useState(false)
+  const [aiProcessingType, setAiProcessingType] = useState<"privacy" | "publicRecords" | null>(null)
 
   const privacyFileInputRef = useRef<HTMLInputElement>(null)
   const publicRecordsInputRef = useRef<HTMLInputElement>(null)
 
-  // Handle file upload
+  // Load data from database on mount
+  useEffect(() => {
+    const loadData = async () => {
+      if (!user?.id || !isLoaded) return
+
+      setIsLoading(true)
+      try {
+        // Load privacy files
+        const { data: privacyFilesData } = await supabase
+          .from("privacy_files")
+          .select("*")
+          .eq("user_id", user.id)
+          .eq("file_type", "privacy")
+
+        if (privacyFilesData) {
+          setPrivacyFiles(privacyFilesData.map(f => ({
+            id: f.id,
+            name: f.name,
+            type: f.type as DownloadFile["type"],
+            size: f.size,
+            uploadedAt: new Date(f.uploaded_at),
+            content: f.content,
+          })))
+        }
+
+        // Load public record files
+        const { data: publicRecordsData } = await supabase
+          .from("privacy_files")
+          .select("*")
+          .eq("user_id", user.id)
+          .eq("file_type", "publicRecords")
+
+        if (publicRecordsData) {
+          setPublicRecordFiles(publicRecordsData.map(f => ({
+            id: f.id,
+            name: f.name,
+            type: f.type as DownloadFile["type"],
+            size: f.size,
+            uploadedAt: new Date(f.uploaded_at),
+            content: f.content,
+          })))
+        }
+
+        // Load privacy data
+        const { data: privacyData } = await supabase
+          .from("privacy_data")
+          .select("*")
+          .eq("user_id", user.id)
+          .single()
+
+        if (privacyData) {
+          setPrivacyFileData({
+            fullName: privacyData.full_name || "",
+            dateOfBirth: privacyData.date_of_birth || "",
+            ssn: privacyData.ssn || "",
+            address: privacyData.address || "",
+            city: privacyData.city || "",
+            state: privacyData.state || "",
+            zip: privacyData.zip || "",
+            phone: privacyData.phone || "",
+            email: privacyData.email || "",
+            privacyNumber: privacyData.privacy_number || "",
+            privacyNumberIssueDate: privacyData.privacy_number_issue_date || "",
+            privacyNumberStatus: privacyData.privacy_number_status || "Pending",
+            creditScore: privacyData.credit_score || 0,
+            creditBureau: privacyData.credit_bureau || "",
+            creditReportDate: privacyData.credit_report_date || "",
+            publicRecordsCount: privacyData.public_records_count || 0,
+            publicRecordsStatus: privacyData.public_records_status || "Pending",
+            tradelines: privacyData.tradelines || [],
+            bankAccounts: privacyData.bank_accounts || [],
+            notes: privacyData.notes || "",
+          })
+        }
+      } catch (error) {
+        console.error("Error loading privacy data:", error)
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    loadData()
+  }, [user?.id, isLoaded])
+
+  // Save file to database
+  const saveFile = async (file: DownloadFile, fileType: "privacy" | "publicRecords") => {
+    if (!user?.id) return
+
+    try {
+      await supabase.from("privacy_files").upsert({
+        id: file.id,
+        user_id: user.id,
+        name: file.name,
+        type: file.type,
+        size: file.size,
+        uploaded_at: file.uploadedAt.toISOString(),
+        content: file.content || null,
+        file_type: fileType,
+      })
+    } catch (error) {
+      console.error("Error saving file:", error)
+    }
+  }
+
+  // Save privacy data to database
+  const savePrivacyData = async (data: PrivacyFileData) => {
+    if (!user?.id) return
+
+    try {
+      await supabase.from("privacy_data").upsert({
+        user_id: user.id,
+        full_name: data.fullName,
+        date_of_birth: data.dateOfBirth,
+        ssn: data.ssn,
+        address: data.address,
+        city: data.city,
+        state: data.state,
+        zip: data.zip,
+        phone: data.phone,
+        email: data.email,
+        privacy_number: data.privacyNumber,
+        privacy_number_issue_date: data.privacyNumberIssueDate,
+        privacy_number_status: data.privacyNumberStatus,
+        credit_score: data.creditScore,
+        credit_bureau: data.creditBureau,
+        credit_report_date: data.creditReportDate,
+        public_records_count: data.publicRecordsCount,
+        public_records_status: data.publicRecordsStatus,
+        tradelines: data.tradelines,
+        bank_accounts: data.bankAccounts,
+        notes: data.notes,
+        updated_at: new Date().toISOString(),
+      })
+    } catch (error) {
+      console.error("Error saving privacy data:", error)
+    }
+  }
+
+  // Handle file upload with database persistence
   const handleFileUpload = useCallback((files: File[], type: "privacy" | "publicRecords") => {
     files.forEach(async (file) => {
       const blobUrl = URL.createObjectURL(file)
@@ -157,13 +301,27 @@ export default function PrivacyPage() {
         file.type.includes("text") ||
         file.name.endsWith(".txt") ||
         file.name.endsWith(".csv") ||
-        file.name.endsWith(".md")
+        file.name.endsWith(".md") ||
+        file.name.endsWith(".doc") ||
+        file.name.endsWith(".docx")
 
       if (isTextFile) {
         try {
           content = await file.text()
         } catch {
           content = undefined
+        }
+      }
+
+      // For PDFs, read as base64 for AI processing
+      let base64Content: string | undefined
+      if (file.type.includes("pdf")) {
+        try {
+          const arrayBuffer = await file.arrayBuffer()
+          base64Content = Buffer.from(arrayBuffer).toString("base64")
+          content = `[PDF Content - Base64 encoded for AI processing]`
+        } catch {
+          base64Content = undefined
         }
       }
 
@@ -176,7 +334,7 @@ export default function PrivacyPage() {
         size: file.size,
         uploadedAt: new Date(),
         blobUrl,
-        content,
+        content: content || base64Content,
       }
 
       if (type === "privacy") {
@@ -184,14 +342,108 @@ export default function PrivacyPage() {
       } else {
         setPublicRecordFiles(prev => [...prev, newFile])
       }
-    })
-  }, [])
 
-  const handleDeleteFile = (fileId: string, type: "privacy" | "publicRecords") => {
+      // Save to database
+      await saveFile(newFile, type)
+    })
+  }, [user?.id])
+
+  // Populate with AI function
+  const handlePopulateWithAI = async (type: "privacy" | "publicRecords") => {
+    const filesToProcess = type === "privacy" ? privacyFiles : publicRecordFiles
+
+    if (filesToProcess.length === 0) {
+      alert(`No ${type === "privacy" ? "privacy" : "public records"} files uploaded. Please upload files first.`)
+      return
+    }
+
+    setAiProcessing(true)
+    setAiProcessingType(type)
+
+    try {
+      // Prepare documents for AI processing
+      const documents = filesToProcess
+        .filter(f => f.content)
+        .map(f => ({
+          fileName: f.name,
+          content: f.content || "",
+          type: f.type,
+        }))
+
+      if (documents.length === 0) {
+        alert("No readable content found in uploaded files. Please upload text files (.txt, .csv, .doc) for best results.")
+        return
+      }
+
+      const response = await fetch("/api/process-privacy-documents", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ documents, type }),
+      })
+
+      if (response.ok) {
+        const result = await response.json()
+        if (result.success && result.data) {
+          const data = result.data
+
+          // Update privacy data with extracted information
+          const updatedData = {
+            ...privacyFileData,
+            fullName: data.fullName || privacyFileData.fullName,
+            dateOfBirth: data.dateOfBirth || privacyFileData.dateOfBirth,
+            ssn: data.ssn || privacyFileData.ssn,
+            address: data.address || privacyFileData.address,
+            city: data.city || privacyFileData.city,
+            state: data.state || privacyFileData.state,
+            zip: data.zip || privacyFileData.zip,
+            phone: data.phone || privacyFileData.phone,
+            email: data.email || privacyFileData.email,
+            privacyNumber: data.privacyNumber || privacyFileData.privacyNumber,
+            privacyNumberIssueDate: data.privacyNumberIssueDate || privacyFileData.privacyNumberIssueDate,
+            privacyNumberStatus: data.privacyNumberStatus || privacyFileData.privacyNumberStatus,
+            creditScore: data.creditScore || privacyFileData.creditScore,
+            creditBureau: data.creditBureau || privacyFileData.creditBureau,
+            creditReportDate: data.creditReportDate || privacyFileData.creditReportDate,
+            publicRecordsCount: data.publicRecordsCount ?? privacyFileData.publicRecordsCount,
+            publicRecordsStatus: data.publicRecordsStatus || privacyFileData.publicRecordsStatus,
+            tradelines: data.tradelines || privacyFileData.tradelines,
+            bankAccounts: data.bankAccounts || privacyFileData.bankAccounts,
+            notes: data.notes || privacyFileData.notes,
+          }
+
+          setPrivacyFileData(updatedData)
+          await savePrivacyData(updatedData)
+
+          alert(`Successfully extracted data from ${result.documentsProcessed} ${type === "privacy" ? "privacy" : "public records"} documents!`)
+        } else {
+          alert("AI processing completed but no data was found in the documents.")
+        }
+      } else {
+        alert("Failed to process documents. Please try again.")
+      }
+    } catch (error) {
+      console.error("AI processing error:", error)
+      alert("An error occurred while processing documents.")
+    } finally {
+      setAiProcessing(false)
+      setAiProcessingType(null)
+    }
+  }
+
+  const handleDeleteFile = async (fileId: string, type: "privacy" | "publicRecords") => {
     if (type === "privacy") {
       setPrivacyFiles(prev => prev.filter(f => f.id !== fileId))
     } else {
       setPublicRecordFiles(prev => prev.filter(f => f.id !== fileId))
+    }
+
+    // Delete from database
+    if (user?.id) {
+      try {
+        await supabase.from("privacy_files").delete().eq("id", fileId)
+      } catch (error) {
+        console.error("Error deleting file:", error)
+      }
     }
   }
 
@@ -305,7 +557,7 @@ export default function PrivacyPage() {
                         <strong>Supported formats:</strong> PDF, Word (.doc, .docx), Text (.txt), CSV
                       </p>
                       <p className="text-gray-300 text-xs">
-                        <strong>Tip:</strong> You can also upload privacy documents in the <span className="text-amber-400">Business Management</span> tab. Click <span className="text-amber-400">"Populate with AI"</span> there to automatically extract and populate your privacy data.
+                        <strong>Next Step:</strong> After uploading, click <span className="text-purple-400">"Populate with AI"</span> to automatically extract your personal info, privacy number, and credit data.
                       </p>
                     </div>
                   }
@@ -326,6 +578,46 @@ export default function PrivacyPage() {
                   accept=".pdf,.doc,.docx,.txt,.csv"
                   onChange={(e) => handleFileUpload(Array.from(e.target.files || []), "privacy")}
                 />
+
+                {/* Populate with AI Button */}
+                <Tooltip
+                  position="bottom"
+                  maxWidth="380px"
+                  content={
+                    <div className="space-y-2">
+                      <p className="font-semibold text-purple-400">Extract Privacy Data with AI</p>
+                      <p>Scans your uploaded privacy files to automatically extract:</p>
+                      <ul className="text-gray-300 text-xs list-disc list-inside space-y-1 mt-1">
+                        <li>Personal information (name, DOB, SSN, address)</li>
+                        <li>Privacy number and status</li>
+                        <li>Credit score and bureau information</li>
+                        <li>Bank accounts and tradelines</li>
+                      </ul>
+                      <p className="text-gray-300 text-xs mt-2 border-t border-gray-600 pt-2">
+                        <strong>How to use:</strong> Upload your privacy file documents first, then click this button to auto-fill all fields.
+                      </p>
+                      <p className="text-gray-400 text-xs italic">Admins can upload and process files on behalf of clients.</p>
+                    </div>
+                  }
+                >
+                  <Button
+                    onClick={() => handlePopulateWithAI("privacy")}
+                    disabled={aiProcessing || privacyFiles.length === 0}
+                    className="bg-gradient-to-r from-purple-500 to-blue-500 text-white hover:from-purple-600 hover:to-blue-600 disabled:opacity-50"
+                  >
+                    {aiProcessing && aiProcessingType === "privacy" ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Processing...
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="h-4 w-4 mr-2" />
+                        Populate with AI
+                      </>
+                    )}
+                  </Button>
+                </Tooltip>
               </div>
 
               {privacyFiles.length > 0 ? (
@@ -413,7 +705,7 @@ export default function PrivacyPage() {
                         <strong>Supported formats:</strong> PDF, Word (.doc, .docx), Text (.txt), CSV, Excel (.xls, .xlsx)
                       </p>
                       <p className="text-gray-300 text-xs">
-                        <strong>Tip:</strong> You can also upload public records in the <span className="text-amber-400">Business Management</span> tab. Click <span className="text-amber-400">"Populate with AI"</span> there to automatically extract and populate your public records data.
+                        <strong>Next Step:</strong> After uploading, click <span className="text-green-400">"Populate with AI"</span> to automatically extract and update your public records status.
                       </p>
                     </div>
                   }
@@ -434,6 +726,46 @@ export default function PrivacyPage() {
                   accept=".pdf,.doc,.docx,.txt,.csv,.xls,.xlsx"
                   onChange={(e) => handleFileUpload(Array.from(e.target.files || []), "publicRecords")}
                 />
+
+                {/* Populate with AI Button */}
+                <Tooltip
+                  position="bottom"
+                  maxWidth="380px"
+                  content={
+                    <div className="space-y-2">
+                      <p className="font-semibold text-green-400">Extract Public Records with AI</p>
+                      <p>Scans your uploaded public records documents to automatically extract:</p>
+                      <ul className="text-gray-300 text-xs list-disc list-inside space-y-1 mt-1">
+                        <li>Public records count and status</li>
+                        <li>Court records, liens, judgments</li>
+                        <li>Bankruptcy information if present</li>
+                        <li>Any official filings data</li>
+                      </ul>
+                      <p className="text-gray-300 text-xs mt-2 border-t border-gray-600 pt-2">
+                        <strong>How to use:</strong> Upload your public records documents first, then click this button to auto-fill all fields.
+                      </p>
+                      <p className="text-gray-400 text-xs italic">Admins can upload and process files on behalf of clients.</p>
+                    </div>
+                  }
+                >
+                  <Button
+                    onClick={() => handlePopulateWithAI("publicRecords")}
+                    disabled={aiProcessing || publicRecordFiles.length === 0}
+                    className="bg-gradient-to-r from-green-500 to-teal-500 text-white hover:from-green-600 hover:to-teal-600 disabled:opacity-50"
+                  >
+                    {aiProcessing && aiProcessingType === "publicRecords" ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Processing...
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="h-4 w-4 mr-2" />
+                        Populate with AI
+                      </>
+                    )}
+                  </Button>
+                </Tooltip>
               </div>
 
               {publicRecordFiles.length > 0 ? (
