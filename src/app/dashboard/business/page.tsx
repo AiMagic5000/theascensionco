@@ -108,7 +108,7 @@ function formatFileSize(bytes: number): string {
 }
 
 export default function BusinessPage() {
-  const [activeTab, setActiveTab] = useState<"profile" | "documents">("documents")
+  const [activeTab, setActiveTab] = useState<"profile" | "documents">("profile")
   const [businessProfile, setBusinessProfile] = useState(initialBusinessProfile)
   const [accounts, setAccounts] = useState(initialAccounts)
   const [editingProfile, setEditingProfile] = useState(false)
@@ -286,28 +286,28 @@ export default function BusinessPage() {
         </div>
 
         {/* Tab Switcher */}
-        <div className="flex rounded-xl overflow-hidden border border-gray-200 dark:border-gray-700 bg-gray-100 dark:bg-gray-800 p-1">
-          <button
-            onClick={() => setActiveTab("documents")}
-            className={`px-4 py-2 text-sm font-medium rounded-lg transition-all ${
-              activeTab === "documents"
-                ? "bg-white dark:bg-gray-900 text-gray-900 dark:text-white shadow-sm"
-                : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
-            }`}
-          >
-            <FileText className="h-4 w-4 inline mr-2" />
-            Documents
-          </button>
+        <div className="flex rounded-xl overflow-hidden border border-amber-200 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/20 p-1">
           <button
             onClick={() => setActiveTab("profile")}
             className={`px-4 py-2 text-sm font-medium rounded-lg transition-all ${
               activeTab === "profile"
-                ? "bg-white dark:bg-gray-900 text-gray-900 dark:text-white shadow-sm"
-                : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
+                ? "bg-amber-100 dark:bg-amber-800/50 text-amber-900 dark:text-amber-100 shadow-sm border border-amber-300 dark:border-amber-600"
+                : "text-gray-600 dark:text-gray-400 hover:text-amber-800 dark:hover:text-amber-200"
             }`}
           >
             <Building2 className="h-4 w-4 inline mr-2" />
             Profile & Accounts
+          </button>
+          <button
+            onClick={() => setActiveTab("documents")}
+            className={`px-4 py-2 text-sm font-medium rounded-lg transition-all ${
+              activeTab === "documents"
+                ? "bg-amber-100 dark:bg-amber-800/50 text-amber-900 dark:text-amber-100 shadow-sm border border-amber-300 dark:border-amber-600"
+                : "text-gray-600 dark:text-gray-400 hover:text-amber-800 dark:hover:text-amber-200"
+            }`}
+          >
+            <FileText className="h-4 w-4 inline mr-2" />
+            Documents
           </button>
         </div>
       </div>
