@@ -160,13 +160,13 @@ export default function BusinessPage() {
 
       try {
         // Load business profile
-        const { data: profileData } = await supabase
-          .from('business_profiles')
+        const { data: profileData, error: profileError } = await supabase
+          .from('ascension_business_profiles')
           .select('*')
           .eq('user_id', userId)
-          .single()
+          .maybeSingle()
 
-        if (profileData) {
+        if (profileData && !profileError) {
           setBusinessProfile({
             companyName: profileData.company_name || '',
             dunsNumber: profileData.duns_number || '',
@@ -179,7 +179,7 @@ export default function BusinessPage() {
 
         // Load accounts
         const { data: accountsData } = await supabase
-          .from('business_accounts')
+          .from('ascension_business_accounts')
           .select('*')
           .eq('user_id', userId)
 
@@ -197,7 +197,7 @@ export default function BusinessPage() {
 
         // Load folders
         const { data: foldersData } = await supabase
-          .from('folders')
+          .from('ascension_folders')
           .select('*')
           .eq('user_id', userId)
 
@@ -216,7 +216,7 @@ export default function BusinessPage() {
 
         // Load files
         const { data: filesData } = await supabase
-          .from('files')
+          .from('ascension_files')
           .select('*')
           .eq('user_id', userId)
 
@@ -250,7 +250,7 @@ export default function BusinessPage() {
 
     try {
       await supabase
-        .from('business_profiles')
+        .from('ascension_business_profiles')
         .upsert({
           user_id: user.id,
           company_name: profile.companyName,
@@ -274,7 +274,7 @@ export default function BusinessPage() {
 
     try {
       await supabase
-        .from('business_accounts')
+        .from('ascension_business_accounts')
         .upsert({
           id: account.id,
           user_id: user.id,
@@ -296,7 +296,7 @@ export default function BusinessPage() {
 
     try {
       await supabase
-        .from('business_accounts')
+        .from('ascension_business_accounts')
         .delete()
         .eq('id', accountId)
         .eq('user_id', user.id)
@@ -311,7 +311,7 @@ export default function BusinessPage() {
 
     try {
       await supabase
-        .from('folders')
+        .from('ascension_folders')
         .upsert({
           id: folder.id,
           user_id: user.id,
@@ -329,7 +329,7 @@ export default function BusinessPage() {
 
     try {
       await supabase
-        .from('files')
+        .from('ascension_files')
         .upsert({
           id: file.id,
           user_id: user.id,
@@ -351,7 +351,7 @@ export default function BusinessPage() {
 
     try {
       await supabase
-        .from('files')
+        .from('ascension_files')
         .delete()
         .eq('id', fileId)
         .eq('user_id', user.id)
@@ -639,7 +639,7 @@ export default function BusinessPage() {
       await deleteFileFromDb(file.id)
     }
     if (user) {
-      await supabase.from('folders').delete().eq('id', folderId).eq('user_id', user.id)
+      await supabase.from('ascension_folders').delete().eq('id', folderId).eq('user_id', user.id)
     }
   }
 
