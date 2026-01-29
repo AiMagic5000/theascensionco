@@ -6,6 +6,7 @@ import { useUser } from "@clerk/nextjs"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { Tooltip } from "@/components/ui/tooltip"
 import {
   Shield,
   Lock,
@@ -293,13 +294,30 @@ export default function PrivacyPage() {
           <CardContent>
             <div className="space-y-4">
               <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  onClick={() => privacyFileInputRef.current?.click()}
+                <Tooltip
+                  position="bottom"
+                  maxWidth="380px"
+                  content={
+                    <div className="space-y-2">
+                      <p className="font-semibold text-blue-400">Upload Privacy File Documents</p>
+                      <p>Upload documents containing your privacy information, such as privacy number files, personal identification documents, or profile data.</p>
+                      <p className="text-gray-300 text-xs mt-2 border-t border-gray-600 pt-2">
+                        <strong>Supported formats:</strong> PDF, Word (.doc, .docx), Text (.txt), CSV
+                      </p>
+                      <p className="text-gray-300 text-xs">
+                        <strong>Tip:</strong> You can also upload privacy documents in the <span className="text-amber-400">Business Management</span> tab. Click <span className="text-amber-400">"Populate with AI"</span> there to automatically extract and populate your privacy data.
+                      </p>
+                    </div>
+                  }
                 >
-                  <Upload className="h-4 w-4 mr-2" />
-                  Upload Privacy File
-                </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => privacyFileInputRef.current?.click()}
+                  >
+                    <Upload className="h-4 w-4 mr-2" />
+                    Upload Privacy File
+                  </Button>
+                </Tooltip>
                 <input
                   ref={privacyFileInputRef}
                   type="file"
@@ -384,13 +402,30 @@ export default function PrivacyPage() {
           <CardContent>
             <div className="space-y-4">
               <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  onClick={() => publicRecordsInputRef.current?.click()}
+                <Tooltip
+                  position="bottom"
+                  maxWidth="380px"
+                  content={
+                    <div className="space-y-2">
+                      <p className="font-semibold text-purple-400">Upload Public Records Documents</p>
+                      <p>Upload documents related to your public records, including court records, liens, judgments, bankruptcies, or any official public filings.</p>
+                      <p className="text-gray-300 text-xs mt-2 border-t border-gray-600 pt-2">
+                        <strong>Supported formats:</strong> PDF, Word (.doc, .docx), Text (.txt), CSV, Excel (.xls, .xlsx)
+                      </p>
+                      <p className="text-gray-300 text-xs">
+                        <strong>Tip:</strong> You can also upload public records in the <span className="text-amber-400">Business Management</span> tab. Click <span className="text-amber-400">"Populate with AI"</span> there to automatically extract and populate your public records data.
+                      </p>
+                    </div>
+                  }
                 >
-                  <Upload className="h-4 w-4 mr-2" />
-                  Upload Public Records
-                </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => publicRecordsInputRef.current?.click()}
+                  >
+                    <Upload className="h-4 w-4 mr-2" />
+                    Upload Public Records
+                  </Button>
+                </Tooltip>
                 <input
                   ref={publicRecordsInputRef}
                   type="file"

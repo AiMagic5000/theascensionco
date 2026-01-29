@@ -8,6 +8,7 @@ import { supabase } from "@/lib/supabase"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { Tooltip } from "@/components/ui/tooltip"
 import {
   Building2,
   Plus,
@@ -129,6 +130,79 @@ function formatFileSize(bytes: number): string {
   if (bytes < 1024) return bytes + " B"
   if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB"
   return (bytes / (1024 * 1024)).toFixed(1) + " MB"
+}
+
+// Deduplication helper - checks if an account already exists
+function isDuplicateAccount(existingAccounts: Account[], newAccount: Partial<Account>): boolean {
+  const normalize = (str: string | undefined) => (str || "").toLowerCase().trim()
+
+  return existingAccounts.some((existing) => {
+    // Check by name + institution (most common identifier)
+    if (
+      normalize(existing.name) === normalize(newAccount.name) &&
+      normalize(existing.institution) === normalize(newAccount.institution) &&
+      normalize(existing.name) !== ""
+    ) {
+      return true
+    }
+
+    // Check by category + accountNumber (for bank accounts)
+    if (
+      normalize(existing.category) === normalize(newAccount.category) &&
+      normalize(existing.accountNumber) === normalize(newAccount.accountNumber) &&
+      normalize(existing.accountNumber) !== "" &&
+      normalize(existing.accountNumber) !== "n/a"
+    ) {
+      return true
+    }
+
+    // Check by username + url (for login credentials)
+    if (
+      normalize(existing.username) === normalize(newAccount.username) &&
+      normalize(existing.url) === normalize(newAccount.url) &&
+      normalize(existing.username) !== "" &&
+      normalize(existing.url) !== ""
+    ) {
+      return true
+    }
+
+    // Check by email + category (for email accounts)
+    if (
+      normalize(existing.email) === normalize(newAccount.email) &&
+      normalize(existing.category) === normalize(newAccount.category) &&
+      normalize(existing.email) !== ""
+    ) {
+      return true
+    }
+
+    return false
+  })
+}
+
+// Filter out duplicates from new accounts list
+function filterDuplicateAccounts(existingAccounts: Account[], newAccounts: Partial<Account>[]): Partial<Account>[] {
+  const uniqueNew: Partial<Account>[] = []
+  const seenInBatch = new Set<string>()
+
+  for (const acc of newAccounts) {
+    // Create a simple key for batch deduplication
+    const batchKey = `${(acc.name || "").toLowerCase()}-${(acc.institution || "").toLowerCase()}-${(acc.username || "").toLowerCase()}`
+
+    // Skip if already seen in this batch
+    if (seenInBatch.has(batchKey) && batchKey !== "--") {
+      continue
+    }
+
+    // Skip if duplicate of existing account
+    if (isDuplicateAccount(existingAccounts, acc)) {
+      continue
+    }
+
+    seenInBatch.add(batchKey)
+    uniqueNew.push(acc)
+  }
+
+  return uniqueNew
 }
 
 function BusinessPageContent() {
@@ -680,37 +754,46 @@ function BusinessPageContent() {
             await saveBusinessProfile(updatedProfile)
             console.log("Business profile saved to Cognabase")
 
-            // Auto-add accounts if found
+            // Auto-add accounts if found (with deduplication)
             if (data.accounts && Array.isArray(data.accounts) && data.accounts.length > 0) {
-              console.log(`Found ${data.accounts.length} accounts to add:`, data.accounts)
-              const newAccounts = data.accounts.map((acc: Partial<Account>) => ({
-                id: crypto.randomUUID(),
-                name: acc.name || "Unnamed Account",
-                type: (acc.type === "personal" ? "personal" : "business") as "business" | "personal",
-                category: acc.category || "Other",
-                balance: Number(acc.balance) || 0,
-                institution: acc.institution || "",
-                accountNumber: acc.accountNumber || "",
-                url: acc.url || "",
-                username: acc.username || "",
-                password: acc.password || "",
-                address: acc.address || "",
-                city: acc.city || "",
-                state: acc.state || "",
-                zip: acc.zip || "",
-                entityId: acc.entityId || "",
-                jurisdiction: acc.jurisdiction || "",
-                agentName: acc.agentName || "",
-                phone: acc.phone || "",
-                email: acc.email || "",
-                notes: acc.notes || "",
-              }))
-              console.log("Processed accounts:", newAccounts)
-              setAccounts((prev) => [...prev, ...newAccounts])
-              // Save each account to Cognabase
-              for (const acc of newAccounts) {
-                await saveAccount(acc)
-                console.log("Saved account to Cognabase:", acc.name)
+              console.log(`Found ${data.accounts.length} accounts from AI:`, data.accounts)
+
+              // Filter out duplicates before adding
+              const uniqueAccounts = filterDuplicateAccounts(accounts, data.accounts as Partial<Account>[])
+              console.log(`After deduplication: ${uniqueAccounts.length} unique accounts to add`)
+
+              if (uniqueAccounts.length > 0) {
+                const newAccounts = uniqueAccounts.map((acc: Partial<Account>) => ({
+                  id: crypto.randomUUID(),
+                  name: acc.name || "Unnamed Account",
+                  type: (acc.type === "personal" ? "personal" : "business") as "business" | "personal",
+                  category: acc.category || "Other",
+                  balance: Number(acc.balance) || 0,
+                  institution: acc.institution || "",
+                  accountNumber: acc.accountNumber || "",
+                  url: acc.url || "",
+                  username: acc.username || "",
+                  password: acc.password || "",
+                  address: acc.address || "",
+                  city: acc.city || "",
+                  state: acc.state || "",
+                  zip: acc.zip || "",
+                  entityId: acc.entityId || "",
+                  jurisdiction: acc.jurisdiction || "",
+                  agentName: acc.agentName || "",
+                  phone: acc.phone || "",
+                  email: acc.email || "",
+                  notes: acc.notes || "",
+                }))
+                console.log("Processed unique accounts:", newAccounts)
+                setAccounts((prev) => [...prev, ...newAccounts])
+                // Save each account to Cognabase
+                for (const acc of newAccounts) {
+                  await saveAccount(acc)
+                  console.log("Saved account to Cognabase:", acc.name)
+                }
+              } else {
+                console.log("All extracted accounts already exist (duplicates filtered)")
               }
             } else {
               console.log("No accounts found in AI response")
@@ -954,39 +1037,50 @@ function BusinessPageContent() {
           setBusinessProfile(updatedProfile)
           await saveBusinessProfile(updatedProfile)
 
-          // Add extracted accounts
+          // Add extracted accounts (with deduplication)
           if (data.accounts && Array.isArray(data.accounts) && data.accounts.length > 0) {
-            console.log(`Adding ${data.accounts.length} accounts from AI`)
-            const newAccounts = data.accounts.map((acc: Partial<Account>) => ({
-              id: crypto.randomUUID(),
-              name: acc.name || "Unnamed Account",
-              type: (acc.type === "personal" ? "personal" : "business") as "business" | "personal",
-              category: acc.category || "Other",
-              balance: Number(acc.balance) || 0,
-              institution: acc.institution || "",
-              accountNumber: acc.accountNumber || "",
-              url: acc.url || "",
-              username: acc.username || "",
-              password: acc.password || "",
-              address: acc.address || "",
-              city: acc.city || "",
-              state: acc.state || "",
-              zip: acc.zip || "",
-              entityId: acc.entityId || "",
-              jurisdiction: acc.jurisdiction || "",
-              agentName: acc.agentName || "",
-              phone: acc.phone || "",
-              email: acc.email || "",
-              notes: acc.notes || "",
-            }))
+            console.log(`Found ${data.accounts.length} accounts from AI`)
 
-            setAccounts((prev) => [...prev, ...newAccounts])
-            for (const acc of newAccounts) {
-              await saveAccount(acc)
+            // Filter out duplicates before adding
+            const uniqueAccounts = filterDuplicateAccounts(accounts, data.accounts as Partial<Account>[])
+            console.log(`After deduplication: ${uniqueAccounts.length} unique accounts to add`)
+
+            if (uniqueAccounts.length > 0) {
+              const newAccounts = uniqueAccounts.map((acc: Partial<Account>) => ({
+                id: crypto.randomUUID(),
+                name: acc.name || "Unnamed Account",
+                type: (acc.type === "personal" ? "personal" : "business") as "business" | "personal",
+                category: acc.category || "Other",
+                balance: Number(acc.balance) || 0,
+                institution: acc.institution || "",
+                accountNumber: acc.accountNumber || "",
+                url: acc.url || "",
+                username: acc.username || "",
+                password: acc.password || "",
+                address: acc.address || "",
+                city: acc.city || "",
+                state: acc.state || "",
+                zip: acc.zip || "",
+                entityId: acc.entityId || "",
+                jurisdiction: acc.jurisdiction || "",
+                agentName: acc.agentName || "",
+                phone: acc.phone || "",
+                email: acc.email || "",
+                notes: acc.notes || "",
+              }))
+
+              setAccounts((prev) => [...prev, ...newAccounts])
+              for (const acc of newAccounts) {
+                await saveAccount(acc)
+              }
             }
           }
 
-          alert(`Successfully extracted business data from ${result.documentsProcessed} documents!`)
+          const duplicatesFiltered = data.accounts?.length - (filterDuplicateAccounts(accounts, data.accounts as Partial<Account>[])?.length || 0) || 0
+          const message = duplicatesFiltered > 0
+            ? `Successfully extracted business data from ${result.documentsProcessed} documents! (${duplicatesFiltered} duplicate accounts skipped)`
+            : `Successfully extracted business data from ${result.documentsProcessed} documents!`
+          alert(message)
         } else {
           alert("AI processing completed but no business data was found in the documents.")
         }
@@ -1121,14 +1215,46 @@ function BusinessPageContent() {
                   <FolderPlus className="h-4 w-4 mr-2" />
                   New Folder
                 </Button>
-                <Button variant="outline" size="sm" onClick={() => fileInputRef.current?.click()}>
-                  <Upload className="h-4 w-4 mr-2" />
-                  Upload Files
-                </Button>
-                <Button size="sm" onClick={() => folderInputRef.current?.click()} className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700">
-                  <Sparkles className="h-4 w-4 mr-2" />
-                  Upload Repository
-                </Button>
+                <Tooltip
+                  position="bottom"
+                  maxWidth="350px"
+                  content={
+                    <div className="space-y-2">
+                      <p className="font-semibold text-amber-400">Upload Individual Files</p>
+                      <p>Upload specific business documents like tax forms, contracts, or statements one at a time.</p>
+                      <p className="text-gray-300 text-xs mt-2 border-t border-gray-600 pt-2">
+                        <strong>Next Step:</strong> After uploading, go to the <span className="text-amber-400">Profile & Accounts</span> tab and click <span className="text-amber-400">"Populate with AI"</span> to automatically extract business data from your documents.
+                      </p>
+                    </div>
+                  }
+                >
+                  <Button variant="outline" size="sm" onClick={() => fileInputRef.current?.click()}>
+                    <Upload className="h-4 w-4 mr-2" />
+                    Upload Files
+                  </Button>
+                </Tooltip>
+                <Tooltip
+                  position="bottom"
+                  maxWidth="380px"
+                  content={
+                    <div className="space-y-2">
+                      <p className="font-semibold text-purple-400">Upload Entire Folder/Repository</p>
+                      <p>Upload a complete folder containing all your business documents at once. The folder structure will be preserved.</p>
+                      <p className="text-gray-300 text-xs mt-2 border-t border-gray-600 pt-2">
+                        <strong>Next Steps:</strong>
+                      </p>
+                      <ul className="text-gray-300 text-xs list-disc list-inside space-y-1">
+                        <li>Go to <span className="text-amber-400">Profile & Accounts</span> tab and click <span className="text-amber-400">"Populate with AI"</span> to extract all business accounts, EIN, DUNS, and profile data</li>
+                        <li>If your repository includes privacy files or public records, the <span className="text-blue-400">Privacy Services</span> tab will also be updated automatically</li>
+                      </ul>
+                    </div>
+                  }
+                >
+                  <Button size="sm" onClick={() => folderInputRef.current?.click()} className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700">
+                    <Sparkles className="h-4 w-4 mr-2" />
+                    Upload Repository
+                  </Button>
+                </Tooltip>
                 <input
                   ref={fileInputRef}
                   type="file"
@@ -1786,9 +1912,18 @@ function BusinessPageContent() {
                     <Info className="h-4 w-4" />
                   </button>
                   {/* Tooltip */}
-                  <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-900 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none w-64 z-50">
-                    <p className="font-semibold mb-1">Auto-fill Business Profile</p>
-                    <p>Scans your uploaded documents to extract company name, EIN, DUNS, state of formation, and industry information.</p>
+                  <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-3 bg-gray-900 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none w-80 z-50">
+                    <p className="font-semibold mb-1 text-amber-400">Auto-fill Business Profile</p>
+                    <p className="mb-2">Scans your uploaded documents to extract company name, EIN, DUNS, state of formation, and industry information.</p>
+                    <div className="border-t border-gray-700 pt-2 mt-2">
+                      <p className="font-semibold text-blue-400 mb-1">How to use:</p>
+                      <ol className="list-decimal list-inside space-y-1 text-gray-300">
+                        <li>Go to the <span className="text-amber-400">Documents</span> tab</li>
+                        <li>Upload your business files or repository</li>
+                        <li>Return here and click this button</li>
+                      </ol>
+                      <p className="text-gray-400 mt-2 italic">Admins can also upload files on behalf of clients</p>
+                    </div>
                     <div className="absolute top-full left-1/2 transform -translate-x-1/2 border-4 border-transparent border-t-gray-900"></div>
                   </div>
                 </div>
@@ -2005,9 +2140,18 @@ function BusinessPageContent() {
                     <Info className="h-4 w-4" />
                   </button>
                   {/* Tooltip */}
-                  <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-900 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none w-64 z-50">
-                    <p className="font-semibold mb-1">Auto-detect Accounts</p>
-                    <p>Scans your uploaded documents to find bank accounts, credit cards, loans, and lines of credit mentioned in your business files.</p>
+                  <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-3 bg-gray-900 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none w-80 z-50">
+                    <p className="font-semibold mb-1 text-purple-400">Auto-detect Accounts</p>
+                    <p className="mb-2">Scans your uploaded documents to find bank accounts, credit cards, loans, email accounts, registered agents, and more.</p>
+                    <div className="border-t border-gray-700 pt-2 mt-2">
+                      <p className="font-semibold text-blue-400 mb-1">How to use:</p>
+                      <ol className="list-decimal list-inside space-y-1 text-gray-300">
+                        <li>Go to the <span className="text-amber-400">Documents</span> tab</li>
+                        <li>Upload your business files or repository</li>
+                        <li>Return here and click this button</li>
+                      </ol>
+                      <p className="text-gray-400 mt-2 italic">Admins can also upload files on behalf of clients</p>
+                    </div>
                     <div className="absolute top-full left-1/2 transform -translate-x-1/2 border-4 border-transparent border-t-gray-900"></div>
                   </div>
                 </div>

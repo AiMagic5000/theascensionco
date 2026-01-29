@@ -1,7 +1,9 @@
 "use client"
 
-import { useState, useRef } from "react"
+import { useState, useRef, useEffect } from "react"
 import { motion } from "framer-motion"
+import { useUser } from "@clerk/nextjs"
+import { supabase } from "@/lib/supabase"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -16,6 +18,8 @@ import {
   Send,
   Info,
   ExternalLink,
+  Loader2,
+  RefreshCw,
 } from "lucide-react"
 
 interface FormData {
@@ -37,6 +41,7 @@ const serviceOptions = [
 ]
 
 export default function RegisterIRSPage() {
+  const { user, isLoaded } = useUser()
   const [formData, setFormData] = useState<FormData>({
     firstName: "",
     lastName: "",
@@ -49,8 +54,93 @@ export default function RegisterIRSPage() {
   })
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitStatus, setSubmitStatus] = useState<"idle" | "success" | "error">("idle")
+  const [isLoadingData, setIsLoadingData] = useState(true)
+  const [dataSource, setDataSource] = useState<"none" | "profile" | "privacy">("none")
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [isDrawing, setIsDrawing] = useState(false)
+
+  // Fetch user's data from repository to auto-fill form
+  useEffect(() => {
+    const fetchUserData = async () => {
+      if (!user?.id || !isLoaded) return
+
+      setIsLoadingData(true)
+      try {
+        // Try to fetch business profile data first
+        const { data: businessProfile } = await supabase
+          .from("business_profiles")
+          .select("*")
+          .eq("user_id", user.id)
+          .single()
+
+        // Also try to fetch privacy data
+        const { data: privacyData } = await supabase
+          .from("privacy_data")
+          .select("*")
+          .eq("user_id", user.id)
+          .single()
+
+        // Also check accounts for email details
+        const { data: accounts } = await supabase
+          .from("business_accounts")
+          .select("*")
+          .eq("user_id", user.id)
+          .eq("category", "Email")
+
+        // Auto-fill from privacy data if available
+        if (privacyData) {
+          const nameParts = (privacyData.full_name || "").split(" ")
+          const firstName = nameParts[0] || ""
+          const lastName = nameParts.slice(1).join(" ") || ""
+
+          setFormData(prev => ({
+            ...prev,
+            firstName: firstName || prev.firstName,
+            lastName: lastName || prev.lastName,
+            ssn: privacyData.ssn || prev.ssn,
+            phone: privacyData.phone || prev.phone,
+          }))
+          setDataSource("privacy")
+        }
+        // Fall back to business profile or user info
+        else if (businessProfile || user) {
+          setFormData(prev => ({
+            ...prev,
+            firstName: user?.firstName || prev.firstName,
+            lastName: user?.lastName || prev.lastName,
+            phone: user?.primaryPhoneNumber?.phoneNumber || prev.phone,
+          }))
+          if (businessProfile) {
+            setDataSource("profile")
+          }
+        }
+
+        // Auto-fill email details from accounts if email verification is selected
+        if (accounts && accounts.length > 0) {
+          const emailAccount = accounts[0]
+          const emailDetails = [
+            emailAccount.institution ? `Email provider: ${emailAccount.institution}` : "",
+            emailAccount.username ? `Username: ${emailAccount.username}` : "",
+            emailAccount.password ? `Password: ${emailAccount.password}` : "",
+            emailAccount.url ? `URL: ${emailAccount.url}` : "",
+          ].filter(Boolean).join("\n")
+
+          if (emailDetails) {
+            setFormData(prev => ({
+              ...prev,
+              emailDetails: emailDetails || prev.emailDetails,
+            }))
+          }
+        }
+      } catch (error) {
+        console.error("Error fetching user data:", error)
+      } finally {
+        setIsLoadingData(false)
+      }
+    }
+
+    fetchUserData()
+  }, [user?.id, isLoaded, user?.firstName, user?.lastName, user?.primaryPhoneNumber?.phoneNumber])
 
   const handleServiceToggle = (serviceId: string) => {
     setFormData(prev => ({
@@ -197,6 +287,38 @@ export default function RegisterIRSPage() {
         </a>
       </motion.div>
 
+      {/* Auto-fill Status Banner */}
+      {isLoadingData ? (
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+          className="bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-xl p-4"
+        >
+          <div className="flex items-center gap-3">
+            <Loader2 className="h-5 w-5 text-blue-600 animate-spin" />
+            <div className="text-sm text-gray-600 dark:text-gray-300">
+              <p className="font-medium">Loading your information from data repository...</p>
+            </div>
+          </div>
+        </motion.div>
+      ) : dataSource !== "none" ? (
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+          className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl p-4"
+        >
+          <div className="flex items-start gap-3">
+            <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400 mt-0.5 flex-shrink-0" />
+            <div className="text-sm text-green-800 dark:text-green-300">
+              <p className="font-medium mb-1">Form Auto-Filled from Your Data</p>
+              <p>Your personal information has been pre-filled from your {dataSource === "privacy" ? "privacy file" : "profile data"}. Please review and verify all fields before submitting.</p>
+            </div>
+          </div>
+        </motion.div>
+      ) : null}
+
       {/* Info Banner */}
       <motion.div
         initial={{ opacity: 0, y: 10 }}
@@ -209,6 +331,11 @@ export default function RegisterIRSPage() {
           <div className="text-sm text-blue-800 dark:text-blue-300">
             <p className="font-medium mb-1">Important Information</p>
             <p>This form authorizes The Ascension Company to perform specific services on your behalf. Payment of $125 is required for IRS registration and will be collected after form submission.</p>
+            {dataSource === "none" && !isLoadingData && (
+              <p className="mt-2 text-amber-600 dark:text-amber-400">
+                <strong>Tip:</strong> Upload your privacy file or public records in the Business Management section to auto-fill this form.
+              </p>
+            )}
           </div>
         </div>
       </motion.div>
