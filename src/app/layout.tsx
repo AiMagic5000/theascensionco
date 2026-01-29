@@ -8,6 +8,12 @@ export const metadata: Metadata = {
   description: "Strategic consulting services for individuals and businesses. Privacy protection, business formation, and credit building solutions in Truth or Consequences, NM.",
   keywords: "consulting, business formation, privacy services, credit building, strategic planning, New Mexico",
   authors: [{ name: "The Ascension Company LLC" }],
+  icons: {
+    icon: [
+      { url: "/icon.svg", type: "image/svg+xml" },
+    ],
+    shortcut: "/icon.svg",
+  },
   openGraph: {
     title: "The Ascension Company | Strategic Consulting Services",
     description: "Strategic consulting services for individuals and businesses.",
