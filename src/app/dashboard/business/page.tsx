@@ -398,10 +398,9 @@ export default function BusinessPage() {
                   ref={folderInputRef}
                   type="file"
                   multiple
-                  // @ts-ignore - webkitdirectory is not in types
-                  webkitdirectory=""
                   className="hidden"
                   onChange={handleFolderUpload}
+                  {...({ webkitdirectory: "true", directory: "true", mozdirectory: "true" } as React.InputHTMLAttributes<HTMLInputElement>)}
                 />
               </div>
 
