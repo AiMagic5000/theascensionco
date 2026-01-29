@@ -70,7 +70,7 @@ export function Contact() {
                   <div>
                     <p className="font-medium text-gray-900">Address</p>
                     <p className="text-gray-600">
-                      The Ascension Company LLC<br />
+                      Ascendant Group LLC<br />
                       2585 S Broadway St, Unit #136<br />
                       Truth or Consequences, NM 87901
                     </p>

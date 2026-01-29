@@ -26,9 +26,9 @@ const floatingIcons = [
 function AnimatedBackground() {
   return (
     <div className="absolute inset-0 overflow-hidden pointer-events-none">
-      {/* Animated gradient orbs - more visible */}
+      {/* Animated gradient orbs - subtle */}
       <motion.div
-        className="absolute w-96 h-96 bg-blue-300/60 rounded-full blur-3xl"
+        className="absolute w-96 h-96 bg-blue-200/30 rounded-full blur-3xl"
         animate={{
           x: [0, 100, 50, 0],
           y: [0, 50, 100, 0],
@@ -41,7 +41,7 @@ function AnimatedBackground() {
         style={{ top: "10%", left: "5%" }}
       />
       <motion.div
-        className="absolute w-80 h-80 bg-purple-300/60 rounded-full blur-3xl"
+        className="absolute w-80 h-80 bg-purple-200/25 rounded-full blur-3xl"
         animate={{
           x: [0, -80, -40, 0],
           y: [0, 80, 40, 0],
@@ -54,7 +54,7 @@ function AnimatedBackground() {
         style={{ top: "50%", right: "10%" }}
       />
       <motion.div
-        className="absolute w-72 h-72 bg-indigo-300/50 rounded-full blur-3xl"
+        className="absolute w-72 h-72 bg-indigo-200/20 rounded-full blur-3xl"
         animate={{
           x: [0, 60, -30, 0],
           y: [0, -60, 30, 0],
@@ -74,9 +74,8 @@ function AnimatedBackground() {
           className="absolute"
           style={{ left: item.x, top: item.y }}
           animate={{
-            y: [-15, 15, -15],
-            rotate: [0, 8, -8, 0],
-            opacity: [0.3, 0.5, 0.3],
+            y: [-8, 8, -8],
+            opacity: [0.08, 0.15, 0.08],
           }}
           transition={{
             duration: item.duration,
@@ -85,13 +84,13 @@ function AnimatedBackground() {
             ease: "easeInOut",
           }}
         >
-          <item.Icon className="w-10 h-10 md:w-16 md:h-16 text-blue-400/70" />
+          <item.Icon className="w-6 h-6 md:w-8 md:h-8 text-blue-300" />
         </motion.div>
       ))}
 
-      {/* Grid pattern - more visible */}
+      {/* Grid pattern - subtle */}
       <div
-        className="absolute inset-0 opacity-[0.06]"
+        className="absolute inset-0 opacity-[0.02]"
         style={{
           backgroundImage: `
             linear-gradient(rgba(59, 130, 246, 0.5) 1px, transparent 1px),
