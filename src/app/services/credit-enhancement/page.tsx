@@ -400,9 +400,9 @@ export default function CreditEnhancementPage() {
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
               </Link>
-              <Link href="/sign-up">
+              <Link href="/dashboard/credit-repair">
                 <Button size="lg" variant="outline" className="w-full sm:w-auto border-white text-white hover:bg-white/10">
-                  Start Repairing My Credit
+                  See My Dashboard
                 </Button>
               </Link>
             </motion.div>
@@ -650,10 +650,10 @@ export default function CreditEnhancementPage() {
             </div>
 
             <div className="text-center">
-              <Link href="/sign-up">
+              <Link href="/dashboard/credit-repair">
                 <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
                   <Button size="lg" className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 shadow-lg">
-                    Start Credit Enhancement
+                    See My Dashboard
                     <ArrowRight className="ml-2 h-4 w-4" />
                   </Button>
                 </motion.div>
@@ -793,10 +793,10 @@ export default function CreditEnhancementPage() {
             viewport={{ once: true }}
             transition={{ delay: 0.2 }}
           >
-            <Link href="/sign-up">
+            <Link href="/dashboard/credit-repair">
               <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
                 <Button size="lg" className="bg-white text-green-600 hover:bg-green-50 shadow-xl">
-                  Start Your Credit Repair
+                  See My Dashboard
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
               </motion.div>
