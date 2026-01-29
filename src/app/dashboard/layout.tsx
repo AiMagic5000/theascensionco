@@ -4,6 +4,7 @@ import { useState } from "react"
 import Link from "next/link"
 import Image from "next/image"
 import { usePathname } from "next/navigation"
+import { useUser } from "@clerk/nextjs"
 import { UserButtonWrapper } from "@/components/user-button-wrapper"
 import { ThemeToggle } from "@/components/ui/theme-toggle"
 import { cn } from "@/lib/utils"
@@ -19,6 +20,10 @@ import {
   ChevronDown,
   TrendingUp,
   FileCheck,
+  Users,
+  Activity,
+  Settings,
+  Mail,
 } from "lucide-react"
 
 interface SubLink {
@@ -32,6 +37,7 @@ interface SidebarLink {
   label: string
   icon: React.ComponentType<{ className?: string }>
   subLinks?: SubLink[]
+  adminOnly?: boolean
 }
 
 const sidebarLinks: SidebarLink[] = [
@@ -50,10 +56,36 @@ const sidebarLinks: SidebarLink[] = [
   { href: "/dashboard/support", label: "Help & Support", icon: HelpCircle },
 ]
 
+const adminLinks: SidebarLink[] = [
+  {
+    href: "/dashboard/admin",
+    label: "Admin Panel",
+    icon: Settings,
+    adminOnly: true,
+    subLinks: [
+      { href: "/dashboard/admin/clients", label: "Client Management", icon: Users },
+      { href: "/dashboard/admin/activity", label: "Activity Log", icon: Activity },
+      { href: "/dashboard/admin/emails", label: "Client Emails", icon: Mail },
+    ]
+  },
+]
+
+// Check if user is admin based on email domain
+const isAdminEmail = (email: string | undefined | null): boolean => {
+  if (!email) return false
+  return email.endsWith("@theascensionco.us") || email.endsWith("@ascensionco.us")
+}
+
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [expandedMenus, setExpandedMenus] = useState<string[]>([])
   const pathname = usePathname()
+  const { user } = useUser()
+
+  const isAdmin = isAdminEmail(user?.primaryEmailAddress?.emailAddress)
+
+  // Combine regular links with admin links if user is admin
+  const allLinks = isAdmin ? [...sidebarLinks, ...adminLinks] : sidebarLinks
 
   const toggleSubmenu = (href: string) => {
     setExpandedMenus(prev =>
@@ -131,7 +163,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
           {/* Navigation */}
           <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
-            {sidebarLinks.map((link) => {
+            {allLinks.map((link) => {
               const isActive = pathname === link.href
               const hasSubLinks = link.subLinks && link.subLinks.length > 0
               const isExpanded = expandedMenus.includes(link.href) || isChildActive(link)

@@ -1,9 +1,23 @@
 "use client"
 
 import { useState } from "react"
+import { motion } from "framer-motion"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Shield, Lock, Eye, EyeOff, FileText, CheckCircle, AlertCircle } from "lucide-react"
+import {
+  Shield,
+  Lock,
+  Eye,
+  EyeOff,
+  FileText,
+  CheckCircle,
+  AlertCircle,
+  Download,
+  FolderDown,
+  File,
+  FileImage,
+  FileSpreadsheet,
+} from "lucide-react"
 
 // Demo privacy file data (blurred)
 const demoPrivacyFile = {
@@ -17,6 +31,42 @@ const demoPrivacyFile = {
     { name: "Premium AU Tradeline #2", limit: "$20,000", age: "2 years", status: "Active" },
   ],
   publicRecords: 127,
+}
+
+// Demo downloadable files - in production, fetch from database per user
+interface DownloadFile {
+  id: string
+  name: string
+  type: "pdf" | "image" | "spreadsheet" | "document"
+  size: string
+  uploadedAt: string
+  downloadUrl: string
+}
+
+const demoDownloadFiles: DownloadFile[] = [
+  // Empty by default - admin will upload files for each client
+  // Example structure when files are available:
+  // {
+  //   id: "1",
+  //   name: "Public_Records_Report.pdf",
+  //   type: "pdf",
+  //   size: "2.4 MB",
+  //   uploadedAt: "2024-01-20",
+  //   downloadUrl: "#",
+  // },
+]
+
+const getFileIcon = (type: DownloadFile["type"]) => {
+  switch (type) {
+    case "pdf":
+      return FileText
+    case "image":
+      return FileImage
+    case "spreadsheet":
+      return FileSpreadsheet
+    default:
+      return File
+  }
 }
 
 export default function PrivacyPage() {
@@ -98,6 +148,70 @@ export default function PrivacyPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Public Records Downloads */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.2 }}
+      >
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <FolderDown className="h-5 w-5 text-purple-600" />
+              Public Records Downloads
+            </CardTitle>
+            <CardDescription>
+              Download your public records documents uploaded by our team
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {demoDownloadFiles.length > 0 ? (
+              <div className="space-y-3">
+                {demoDownloadFiles.map((file) => {
+                  const FileIcon = getFileIcon(file.type)
+                  return (
+                    <div
+                      key={file.id}
+                      className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 hover:border-purple-300 dark:hover:border-purple-700 transition-colors"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 bg-purple-100 dark:bg-purple-900/30 rounded-lg flex items-center justify-center">
+                          <FileIcon className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+                        </div>
+                        <div>
+                          <p className="font-medium text-gray-900 dark:text-white">
+                            {file.name}
+                          </p>
+                          <p className="text-sm text-gray-500 dark:text-gray-400">
+                            {file.size} - Uploaded {file.uploadedAt}
+                          </p>
+                        </div>
+                      </div>
+                      <Button variant="outline" size="sm" asChild>
+                        <a href={file.downloadUrl} download>
+                          <Download className="h-4 w-4 mr-2" />
+                          Download
+                        </a>
+                      </Button>
+                    </div>
+                  )
+                })}
+              </div>
+            ) : (
+              <div className="text-center py-12 border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-xl">
+                <FolderDown className="h-12 w-12 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
+                <p className="text-gray-500 dark:text-gray-400 font-medium">
+                  No files available yet
+                </p>
+                <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">
+                  Your public records documents will appear here once uploaded by our team
+                </p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </motion.div>
 
       {/* Privacy File Preview (Blurred Demo) */}
       <Card>
