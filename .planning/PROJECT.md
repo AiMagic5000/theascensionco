@@ -1,8 +1,8 @@
-# The Ascension Company Website & Client Dashboard
+# Ascendant Group LLC Website & Client Dashboard
 
 ## What This Is
 
-A professional consulting services website and client dashboard for The Ascension Company LLC, providing credit privacy services, business buildout packages, and financial consulting. Built with Next.js, Clerk authentication, Cognabase backend, dark/light theme toggle, and full mobile responsiveness. Deploys to Hostinger at theascensionco.us.
+A professional consulting services website and client dashboard for Ascendant Group LLC, providing privacy protection, business formation, and credit building consulting services. Built with Next.js, Clerk authentication, Cognabase backend, light theme (forced), and full mobile responsiveness. Deploys via Coolify to ascension.alwaysencrypted.com.
 
 ## Core Value
 
@@ -17,12 +17,15 @@ Clients can purchase consulting packages, access their purchased services throug
 ### Active
 
 #### Landing Page
-- [ ] Hero section with "Think, plan, and track all in one place" style design
-- [ ] Dark/light theme toggle with proper contrast on all text
-- [ ] Navigation with Home, Services, Packages, Resources, Pricing, Login, Get Started
-- [ ] Company information (Antonio Goldwire, Truth or Consequences NM)
-- [ ] Contact section with phone (888) 868-8069 and email support@theascensionco.us
-- [ ] Mobile-responsive design for all viewports
+- [x] Hero section with "Think, plan, and track all in one place" style design
+- [x] Animated hero background (subtle gradient orbs, floating icons)
+- [x] Light theme (forced, no toggle)
+- [x] Navigation with logo (300px), Home, Services, Packages, Resources, Pricing, Login, Get Started
+- [x] Company information (Ascendant Group LLC, Truth or Consequences NM)
+- [x] Contact section with phone (888) 868-8069 and email support@theascensionco.us
+- [x] Privacy Policy page (/privacy) - comprehensive US state coverage
+- [x] Terms of Service page (/terms) - arbitration, disclaimers, refund policy
+- [ ] Mobile-responsive design verification for all viewports
 
 #### Authentication
 - [ ] Clerk authentication integration
@@ -102,12 +105,13 @@ Clients can purchase consulting packages, access their purchased services throug
 
 ## Context
 
-**Business Owner:** Antonio Goldwire
-**Company:** The Ascension Company LLC
+**Company:** Ascendant Group LLC
 **Domain:** theascensionco.us
+**Tunnel URL:** https://ascension.alwaysencrypted.com
 **Phone:** (888) 868-8069
 **Email:** support@theascensionco.us
 **Address:** 2585 S Broadway St, Unit #136, Truth or Consequences, NM 87901
+**Deployment:** Coolify (UUID: jwskgow40k4048w0k8sskwkw)
 
 **Service Fulfillment Partner:**
 - CPN services fulfilled by creditprivacynumber.com
@@ -127,11 +131,12 @@ Clients can purchase consulting packages, access their purchased services throug
 
 ## Constraints
 
-- **Tech Stack**: Next.js 14+, React 18+, Clerk Auth, Cognabase (Supabase), TailwindCSS
-- **Deployment**: Hostinger (user has SSH access)
+- **Tech Stack**: Next.js 14+, React 18+, Clerk Auth, Cognabase (Supabase), TailwindCSS, Framer Motion
+- **Deployment**: Coolify on R730 server via Cloudflare Tunnel
+- **Theme**: Light mode only (forced, no toggle)
 - **Content**: All service descriptions must be reworded from source to avoid plagiarism/duplicate content SEO penalties
 - **Mobile First**: Must work on all mobile viewports
-- **Accessibility**: WCAG 2.1 AA compliance for contrast in both themes
+- **Accessibility**: WCAG 2.1 AA compliance for contrast
 - **Performance**: 2026 web standards, Core Web Vitals optimized
 
 ## Key Decisions
@@ -146,4 +151,4 @@ Clients can purchase consulting packages, access their purchased services throug
 | Hostinger deployment | Client has SSH access, existing hosting | - Pending |
 
 ---
-*Last updated: 2026-01-28 after initialization*
+*Last updated: 2026-01-28 - Theme fixes, legal pages, hero animation completed*
