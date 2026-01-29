@@ -64,7 +64,24 @@ export default function RegisterIRSPage() {
   const requiresEmailDetails = formData.services.includes("email-verify")
   const requiresPayment = formData.services.includes("register-irs")
 
-  // Signature canvas handlers
+  // Signature canvas handlers - with proper coordinate scaling
+  const getCanvasCoordinates = (
+    e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>,
+    canvas: HTMLCanvasElement
+  ) => {
+    const rect = canvas.getBoundingClientRect()
+    const scaleX = canvas.width / rect.width
+    const scaleY = canvas.height / rect.height
+
+    const clientX = "touches" in e ? e.touches[0].clientX : e.clientX
+    const clientY = "touches" in e ? e.touches[0].clientY : e.clientY
+
+    return {
+      x: (clientX - rect.left) * scaleX,
+      y: (clientY - rect.top) * scaleY,
+    }
+  }
+
   const startDrawing = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
     setIsDrawing(true)
     const canvas = canvasRef.current
@@ -72,10 +89,7 @@ export default function RegisterIRSPage() {
     const ctx = canvas.getContext("2d")
     if (!ctx) return
 
-    const rect = canvas.getBoundingClientRect()
-    const x = "touches" in e ? e.touches[0].clientX - rect.left : e.clientX - rect.left
-    const y = "touches" in e ? e.touches[0].clientY - rect.top : e.clientY - rect.top
-
+    const { x, y } = getCanvasCoordinates(e, canvas)
     ctx.beginPath()
     ctx.moveTo(x, y)
   }
@@ -87,10 +101,7 @@ export default function RegisterIRSPage() {
     const ctx = canvas.getContext("2d")
     if (!ctx) return
 
-    const rect = canvas.getBoundingClientRect()
-    const x = "touches" in e ? e.touches[0].clientX - rect.left : e.clientX - rect.left
-    const y = "touches" in e ? e.touches[0].clientY - rect.top : e.clientY - rect.top
-
+    const { x, y } = getCanvasCoordinates(e, canvas)
     ctx.lineTo(x, y)
     ctx.strokeStyle = "#1e3a8a"
     ctx.lineWidth = 2
