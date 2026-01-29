@@ -129,9 +129,9 @@ export function Navigation() {
 
           {/* Right side actions */}
           <div className="flex items-center space-x-4">
-            <Link href="/sign-in" className="hidden sm:block">
-              <Button variant="ghost" size="sm">
-                Sign In
+            <Link href="/dashboard" className="hidden sm:block">
+              <Button size="sm" className="bg-blue-600 hover:bg-blue-700 text-white">
+                Dashboard
               </Button>
             </Link>
             <Link href="/sign-up" className="hidden sm:block">
@@ -214,9 +214,9 @@ export function Navigation() {
           </Link>
 
           <div className="pt-2 space-y-2">
-            <Link href="/sign-in" className="block">
-              <Button variant="outline" className="w-full">
-                Sign In
+            <Link href="/dashboard" className="block">
+              <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white">
+                Dashboard
               </Button>
             </Link>
             <Link href="/sign-up" className="block">

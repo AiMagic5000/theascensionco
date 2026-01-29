@@ -245,11 +245,15 @@ export default function BusinessPage() {
 
   // Save business profile to Cognabase
   const saveBusinessProfile = useCallback(async (profile: typeof businessProfile) => {
-    if (!user) return
+    if (!user) {
+      console.error('Cannot save profile: no user')
+      return
+    }
     setIsSaving(true)
 
     try {
-      await supabase
+      console.log('Saving business profile to Cognabase for user:', user.id)
+      const { data, error } = await supabase
         .from('ascension_business_profiles')
         .upsert({
           user_id: user.id,
@@ -261,6 +265,13 @@ export default function BusinessPage() {
           industry: profile.industry,
           updated_at: new Date().toISOString(),
         }, { onConflict: 'user_id' })
+        .select()
+
+      if (error) {
+        console.error('Supabase error saving profile:', error)
+      } else {
+        console.log('Business profile saved successfully:', data)
+      }
     } catch (error) {
       console.error('Error saving profile:', error)
     } finally {
@@ -270,10 +281,14 @@ export default function BusinessPage() {
 
   // Save account to Cognabase
   const saveAccount = useCallback(async (account: Account) => {
-    if (!user) return
+    if (!user) {
+      console.error('Cannot save account: no user')
+      return
+    }
 
     try {
-      await supabase
+      console.log('Saving account to Cognabase:', account.id, account.name)
+      const { data, error } = await supabase
         .from('ascension_business_accounts')
         .upsert({
           id: account.id,
@@ -285,6 +300,13 @@ export default function BusinessPage() {
           institution: account.institution,
           account_number: account.accountNumber,
         })
+        .select()
+
+      if (error) {
+        console.error('Supabase error saving account:', error)
+      } else {
+        console.log('Account saved successfully:', data)
+      }
     } catch (error) {
       console.error('Error saving account:', error)
     }
@@ -307,10 +329,14 @@ export default function BusinessPage() {
 
   // Save folder to Cognabase
   const saveFolder = useCallback(async (folder: FolderItem) => {
-    if (!user) return
+    if (!user) {
+      console.error('Cannot save folder: no user')
+      return
+    }
 
     try {
-      await supabase
+      console.log('Saving folder to Cognabase:', folder.id, folder.name)
+      const { data, error } = await supabase
         .from('ascension_folders')
         .upsert({
           id: folder.id,
@@ -318,6 +344,13 @@ export default function BusinessPage() {
           name: folder.name,
           parent_id: folder.parentId,
         })
+        .select()
+
+      if (error) {
+        console.error('Supabase error saving folder:', error)
+      } else {
+        console.log('Folder saved successfully:', data)
+      }
     } catch (error) {
       console.error('Error saving folder:', error)
     }
@@ -325,10 +358,14 @@ export default function BusinessPage() {
 
   // Save file metadata to Cognabase
   const saveFile = useCallback(async (file: FileItem) => {
-    if (!user) return
+    if (!user) {
+      console.error('Cannot save file: no user')
+      return
+    }
 
     try {
-      await supabase
+      console.log('Saving file to Cognabase:', file.id, file.name)
+      const { data, error } = await supabase
         .from('ascension_files')
         .upsert({
           id: file.id,
@@ -340,6 +377,13 @@ export default function BusinessPage() {
           content: file.content?.substring(0, 50000), // Limit content size
           ai_processed: file.aiProcessed || false,
         })
+        .select()
+
+      if (error) {
+        console.error('Supabase error saving file:', error)
+      } else {
+        console.log('File saved successfully:', data)
+      }
     } catch (error) {
       console.error('Error saving file:', error)
     }
@@ -392,7 +436,7 @@ export default function BusinessPage() {
     uploadedFiles.forEach(async (file) => {
       // Create a blob URL for download/preview
       const blobUrl = URL.createObjectURL(file)
-      const fileId = Date.now().toString() + Math.random()
+      const fileId = crypto.randomUUID()
 
       // Read text content for text-based files
       let content: string | undefined
@@ -577,8 +621,8 @@ export default function BusinessPage() {
             // Auto-add accounts if found
             if (data.accounts && Array.isArray(data.accounts) && data.accounts.length > 0) {
               console.log(`Found ${data.accounts.length} accounts to add:`, data.accounts)
-              const newAccounts = data.accounts.map((acc: Partial<Account>, index: number) => ({
-                id: Date.now().toString() + index,
+              const newAccounts = data.accounts.map((acc: Partial<Account>) => ({
+                id: crypto.randomUUID(),
                 name: acc.name || "Unnamed Account",
                 type: (acc.type === "personal" ? "personal" : "business") as "business" | "personal",
                 category: acc.category || "Checking",
@@ -611,7 +655,7 @@ export default function BusinessPage() {
                 ) {
                   newFolderNames.add(folderName.toLowerCase())
                   const newFolder: FolderItem = {
-                    id: Date.now().toString() + Math.random(),
+                    id: crypto.randomUUID(),
                     name: folderName,
                     parentId: null,
                     createdAt: new Date(),
@@ -665,7 +709,7 @@ export default function BusinessPage() {
   const handleCreateFolder = async () => {
     if (newFolderName.trim()) {
       const newFolder: FolderItem = {
-        id: Date.now().toString(),
+        id: crypto.randomUUID(),
         name: newFolderName.trim(),
         parentId: currentFolder,
         createdAt: new Date(),
@@ -708,7 +752,7 @@ export default function BusinessPage() {
 
   const handleAddAccount = async () => {
     const account: Account = {
-      id: Date.now().toString(),
+      id: crypto.randomUUID(),
       ...newAccount,
     }
     setAccounts([...accounts, account])
