@@ -773,6 +773,110 @@ export default function BusinessPage() {
     await deleteAccount(id)
   }
 
+  // Populate business profile and accounts from all uploaded documents using AI
+  const handlePopulateWithAI = async () => {
+    if (files.length === 0) {
+      alert("No documents uploaded. Please upload business documents first in the Documents tab.")
+      return
+    }
+
+    setAiProcessing(true)
+    console.log(`Starting AI population from ${files.length} documents`)
+
+    try {
+      // Gather all documents with content
+      const documents = files
+        .filter((file) => {
+          // Only process files that have content or are text-based
+          const isTextFile =
+            file.type.includes("text") ||
+            file.name.endsWith(".txt") ||
+            file.name.endsWith(".csv") ||
+            file.name.endsWith(".md") ||
+            file.name.endsWith(".json")
+          const isPdf = file.type.includes("pdf") || file.name.toLowerCase().endsWith(".pdf")
+          return file.content || isTextFile || isPdf
+        })
+        .slice(0, 15) // Limit to 15 documents
+        .map((file) => ({
+          fileName: file.name,
+          content: file.content || `[File: ${file.name}]`,
+          type: file.type,
+        }))
+
+      console.log(`Processing ${documents.length} documents with content`)
+
+      if (documents.length === 0) {
+        alert("No documents with readable content found. Please upload text files (.txt, .csv) containing business information.")
+        setAiProcessing(false)
+        return
+      }
+
+      const response = await fetch("/api/process-documents", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ documents }),
+      })
+
+      console.log("API response status:", response.status)
+
+      if (response.ok) {
+        const result = await response.json()
+        console.log("AI extraction result:", result)
+
+        if (result.success && result.data) {
+          const data = result.data
+
+          // Update business profile with extracted data
+          const updatedProfile = {
+            companyName: data.companyName || businessProfile.companyName,
+            ein: data.ein || businessProfile.ein,
+            dunsNumber: data.dunsNumber || businessProfile.dunsNumber,
+            stateOfFormation: data.stateOfFormation || businessProfile.stateOfFormation,
+            industry: data.industry || businessProfile.industry,
+            paydexScore: data.paydexScore || businessProfile.paydexScore,
+          }
+
+          console.log("Updating business profile:", updatedProfile)
+          setBusinessProfile(updatedProfile)
+          await saveBusinessProfile(updatedProfile)
+
+          // Add extracted accounts
+          if (data.accounts && Array.isArray(data.accounts) && data.accounts.length > 0) {
+            console.log(`Adding ${data.accounts.length} accounts from AI`)
+            const newAccounts = data.accounts.map((acc: Partial<Account>) => ({
+              id: crypto.randomUUID(),
+              name: acc.name || "Unnamed Account",
+              type: (acc.type === "personal" ? "personal" : "business") as "business" | "personal",
+              category: acc.category || "Checking",
+              balance: Number(acc.balance) || 0,
+              institution: acc.institution || "",
+              accountNumber: acc.accountNumber || "",
+            }))
+
+            setAccounts((prev) => [...prev, ...newAccounts])
+            for (const acc of newAccounts) {
+              await saveAccount(acc)
+            }
+          }
+
+          alert(`Successfully extracted business data from ${result.documentsProcessed} documents!`)
+        } else {
+          alert("AI processing completed but no business data was found in the documents.")
+        }
+      } else {
+        const errorText = await response.text()
+        console.error("API error:", errorText)
+        alert("Failed to process documents. Please try again.")
+      }
+    } catch (error) {
+      console.error("AI population error:", error)
+      alert("An error occurred while processing documents.")
+    } finally {
+      setAiProcessing(false)
+    }
+  }
+
   // Show loading state while fetching data
   if (isLoading || !isLoaded) {
     return (
@@ -1439,23 +1543,44 @@ export default function BusinessPage() {
                 </CardTitle>
                 <CardDescription>Your business information and D&B tracking</CardDescription>
               </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setEditingProfile(!editingProfile)}
-              >
-                {editingProfile ? (
-                  <>
-                    <X className="mr-2 h-4 w-4" />
-                    Cancel
-                  </>
-                ) : (
-                  <>
-                    <Pencil className="mr-2 h-4 w-4" />
-                    Edit
-                  </>
-                )}
-              </Button>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handlePopulateWithAI}
+                  disabled={aiProcessing || files.length === 0}
+                  className="bg-gradient-to-r from-purple-500 to-blue-500 text-white border-0 hover:from-purple-600 hover:to-blue-600 disabled:opacity-50"
+                >
+                  {aiProcessing ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
+                      Processing...
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="mr-2 h-4 w-4" />
+                      Populate with AI
+                    </>
+                  )}
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setEditingProfile(!editingProfile)}
+                >
+                  {editingProfile ? (
+                    <>
+                      <X className="mr-2 h-4 w-4" />
+                      Cancel
+                    </>
+                  ) : (
+                    <>
+                      <Pencil className="mr-2 h-4 w-4" />
+                      Edit
+                    </>
+                  )}
+                </Button>
+              </div>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -1626,10 +1751,31 @@ export default function BusinessPage() {
                 </CardTitle>
                 <CardDescription>Manage your business accounts</CardDescription>
               </div>
-              <Button onClick={() => setShowAddAccount(true)}>
-                <Plus className="mr-2 h-4 w-4" />
-                Add Account
-              </Button>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handlePopulateWithAI}
+                  disabled={aiProcessing || files.length === 0}
+                  className="bg-gradient-to-r from-purple-500 to-blue-500 text-white border-0 hover:from-purple-600 hover:to-blue-600 disabled:opacity-50"
+                >
+                  {aiProcessing ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
+                      Processing...
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="mr-2 h-4 w-4" />
+                      Populate with AI
+                    </>
+                  )}
+                </Button>
+                <Button onClick={() => setShowAddAccount(true)}>
+                  <Plus className="mr-2 h-4 w-4" />
+                  Add Account
+                </Button>
+              </div>
             </CardHeader>
             <CardContent>
               {showAddAccount && (
