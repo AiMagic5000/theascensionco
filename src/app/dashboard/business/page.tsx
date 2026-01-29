@@ -48,6 +48,7 @@ interface FileItem {
   uploadedAt: Date
   folderId: string | null
   url?: string
+  blobUrl?: string // Object URL for download/preview
   status: "uploading" | "processing" | "ready" | "error"
   aiProcessed?: boolean
 }
@@ -173,6 +174,9 @@ export default function BusinessPage() {
 
   const handleFileUpload = (uploadedFiles: File[]) => {
     uploadedFiles.forEach((file) => {
+      // Create a blob URL for download/preview
+      const blobUrl = URL.createObjectURL(file)
+
       const newFile: FileItem = {
         id: Date.now().toString() + Math.random(),
         name: file.name,
@@ -180,6 +184,7 @@ export default function BusinessPage() {
         size: file.size,
         uploadedAt: new Date(),
         folderId: currentFolder,
+        blobUrl: blobUrl,
         status: "uploading",
       }
 
@@ -691,7 +696,22 @@ export default function BusinessPage() {
                                   <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); handlePreviewFile(file) }}>
                                     <Eye className="h-4 w-4" />
                                   </Button>
-                                  <Button variant="ghost" size="icon">
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={(e) => {
+                                      e.stopPropagation()
+                                      if (file.blobUrl) {
+                                        const link = document.createElement('a')
+                                        link.href = file.blobUrl
+                                        link.download = file.name
+                                        document.body.appendChild(link)
+                                        link.click()
+                                        document.body.removeChild(link)
+                                      }
+                                    }}
+                                    disabled={!file.blobUrl}
+                                  >
                                     <Download className="h-4 w-4" />
                                   </Button>
                                   <Button
@@ -775,7 +795,21 @@ export default function BusinessPage() {
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
-                      <Button variant="outline" size="sm">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          if (selectedFile.blobUrl) {
+                            const link = document.createElement('a')
+                            link.href = selectedFile.blobUrl
+                            link.download = selectedFile.name
+                            document.body.appendChild(link)
+                            link.click()
+                            document.body.removeChild(link)
+                          }
+                        }}
+                        disabled={!selectedFile.blobUrl}
+                      >
                         <Download className="h-4 w-4 mr-2" />
                         Download
                       </Button>
